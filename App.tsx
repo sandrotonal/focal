@@ -18,21 +18,34 @@ import Animated, {
   interpolate,
   runOnJS,
   useReducedMotion,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { LineSidebar } from './src/components/LineSidebar';
+import { OnboardingScreen } from './src/components/onboarding';
+import { MainFocus3D } from './src/components/MainFocus3D';
+import { ModernSwitch } from './src/components/ui/ModernSwitch';
+import {
+  playFocusCompleteSound,
+  playFocusStartSound,
+  playResetSound,
+  playTickSound,
+  setSoundEnabled as setSoundEngineEnabled,
+} from './src/audio/soundEngine';
 import {
   cancelFocusCompletion,
   requestNotificationPermission,
   scheduleFocusCompletion,
 } from './src/notifications/notifications';
 import {
+  FocusPreferences,
   loadPreferences,
   savePreferences,
   ThemeMode,
@@ -68,7 +81,7 @@ const RESET_THRESHOLD = 112;
 const FLICK_THRESHOLD = -56;
 const FLICK_VELOCITY = -650;
 const SESSION_OPTIONS = [25, 50, 90];
-const MENU_ITEMS = ['Odak', 'Süre', 'Tema', 'Bildirim', 'Haptik'];
+const MENU_ITEMS = ['Odak', 'Süre', 'Tema', 'Bildirim', 'Haptik', 'Ses'];
 
 function formatElapsed(totalSeconds: number) {
   const hours = Math.floor(totalSeconds / 3600);
@@ -92,6 +105,9 @@ type FocusDrawerProps = {
   theme: ThemeMode;
   hapticsEnabled: boolean;
   notificationsEnabled: boolean;
+  soundEnabled: boolean;
+  completedSessions: number;
+  totalFocusMinutes: number;
   colors: AppColors;
   onClose: () => void;
   onSelect: (index: number) => void;
@@ -101,6 +117,7 @@ type FocusDrawerProps = {
   onThemeChange: (theme: ThemeMode) => void;
   onToggleHaptics: () => void;
   onToggleNotifications: () => void;
+  onToggleSound: () => void;
 };
 
 function FocusDrawer({
@@ -112,6 +129,7 @@ function FocusDrawer({
   theme,
   hapticsEnabled,
   notificationsEnabled,
+  soundEnabled,
   colors,
   onClose,
   onSelect,
@@ -121,6 +139,9 @@ function FocusDrawer({
   onThemeChange,
   onToggleHaptics,
   onToggleNotifications,
+  onToggleSound,
+  completedSessions,
+  totalFocusMinutes,
 }: FocusDrawerProps) {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(-drawerWidth);
@@ -164,10 +185,7 @@ function FocusDrawer({
       >
           <View style={[styles.drawerContent, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}>
             <View style={styles.drawerHeader}>
-              <View>
-                <Text style={[styles.drawerKicker, { color: colors.secondary }]}>Focus Engine</Text>
-                <Text style={[styles.drawerTitle, { color: colors.primary }]}>Kontrol</Text>
-              </View>
+              <Text style={[styles.drawerTitle, { color: colors.primary }]}>KONTROL</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Menüyü kapat"
@@ -187,10 +205,25 @@ function FocusDrawer({
               colors={colors}
             />
 
+            {activeIndex === 0 && (
+              <View style={styles.drawerSummary}>
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryBlock}>
+                    <Text style={[styles.summaryValue, { color: colors.primary }]}>{completedSessions}</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>OTURUM</Text>
+                  </View>
+                  <View style={[styles.summaryDivider, { backgroundColor: colors.hairline }]} />
+                  <View style={styles.summaryBlock}>
+                    <Text style={[styles.summaryValue, { color: colors.primary }]}>{totalFocusMinutes}</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>DAKİKA</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
             {activeIndex !== 0 && <View style={[styles.drawerRule, { backgroundColor: colors.hairline }]} />}
             {activeIndex === 1 && (
               <View style={styles.drawerSection}>
-                <Text style={[styles.sectionLabel, { color: colors.secondary }]}>Oturum süresi</Text>
                 <View style={styles.durationEditor}>
                   <TextInput
                     accessibilityLabel="Oturum süresi dakika"
@@ -204,7 +237,7 @@ function FocusDrawer({
                     style={[styles.durationInput, { color: colors.primary, borderBottomColor: colors.hairline }]}
                     value={durationDraft}
                   />
-                  <Text style={[styles.durationUnit, { color: colors.secondary }]}>dakika</Text>
+                  <Text style={[styles.durationUnit, { color: colors.secondary }]}>dk</Text>
                 </View>
                 <View style={styles.presetRow}>
                   {SESSION_OPTIONS.map((option) => (
@@ -230,61 +263,132 @@ function FocusDrawer({
 
             {activeIndex === 2 && (
               <View style={styles.drawerSection}>
-                <Text style={[styles.sectionLabel, { color: colors.secondary }]}>Tema</Text>
-                <View style={styles.themeRow}>
-                  {(['dark', 'light'] as ThemeMode[]).map((mode) => (
-                    <Pressable
-                      key={mode}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: theme === mode }}
-                      accessibilityLabel={mode === 'dark' ? 'Karanlık tema' : 'Aydınlık tema'}
-                      onPress={() => onThemeChange(mode)}
-                      style={({ pressed }) => [
-                        styles.themeOption,
-                        { borderBottomColor: theme === mode ? colors.accent : colors.hairline },
-                        pressed && styles.itemPressed,
-                      ]}
-                    >
-                      <Text style={[styles.themeOptionText, { color: theme === mode ? colors.primary : colors.secondary }]}>
-                        {mode === 'dark' ? 'Karanlık' : 'Aydınlık'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <Pressable
+                  accessible
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: theme === 'dark' }}
+                  accessibilityLabel="Karanlık tema anahtarı"
+                  onPress={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+                  style={({ pressed }) => [
+                    styles.settingRow,
+                    { borderBottomColor: colors.hairline },
+                    pressed && styles.itemPressed,
+                  ]}
+                >
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>
+                      {theme === 'dark' ? 'Karanlık Mod' : 'Aydınlık Mod'}
+                    </Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                      {theme === 'dark' ? 'OLED saf siyah arayüz' : 'Yüksek kontrastlı aydınlık arayüz'}
+                    </Text>
+                  </View>
+                  <View pointerEvents="none">
+                    <ModernSwitch
+                      value={theme === 'dark'}
+                      onValueChange={() => {}}
+                      checkedBg={colors.accent}
+                      uncheckedBg={colors.hairline}
+                      accessibilityLabel="Karanlık tema anahtarı"
+                    />
+                  </View>
+                </Pressable>
               </View>
             )}
 
             {activeIndex === 3 && (
               <View style={styles.drawerSection}>
-                <Text style={[styles.sectionLabel, { color: colors.secondary }]}>Oturum bitişi</Text>
                 <Pressable
+                  accessible
                   accessibilityRole="switch"
                   accessibilityState={{ checked: notificationsEnabled }}
-                  accessibilityLabel="Oturum bitiş bildirimleri"
+                  accessibilityLabel="Bitiş bildirimi anahtarı"
                   onPress={onToggleNotifications}
-                  style={({ pressed }) => [styles.settingRow, { borderBottomColor: colors.hairline }, pressed && styles.itemPressed]}
+                  style={({ pressed }) => [
+                    styles.settingRow,
+                    { borderBottomColor: colors.hairline },
+                    pressed && styles.itemPressed,
+                  ]}
                 >
-                  <Text style={[styles.settingValue, { color: colors.primary }]}>Bildirimler</Text>
-                  <Text style={[styles.settingAction, { color: colors.accent }]}>{notificationsEnabled ? 'Açık' : 'Kapalı'}</Text>
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>Bitiş Bildirimi</Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>Seans tamamlandığında sistem uyarısı</Text>
+                  </View>
+                  <View pointerEvents="none">
+                    <ModernSwitch
+                      value={notificationsEnabled}
+                      onValueChange={() => {}}
+                      checkedBg={colors.accent}
+                      uncheckedBg={colors.hairline}
+                      accessibilityLabel="Bitiş bildirimi anahtarı"
+                    />
+                  </View>
                 </Pressable>
               </View>
             )}
 
             {activeIndex === 4 && (
               <View style={styles.drawerSection}>
-                <Text style={[styles.sectionLabel, { color: colors.secondary }]}>Dokunsal geri bildirim</Text>
                 <Pressable
+                  accessible
                   accessibilityRole="switch"
                   accessibilityState={{ checked: hapticsEnabled }}
-                  accessibilityLabel="Dokunsal geri bildirim"
+                  accessibilityLabel="Haptik titreşim anahtarı"
                   onPress={onToggleHaptics}
-                  style={({ pressed }) => [styles.settingRow, { borderBottomColor: colors.hairline }, pressed && styles.itemPressed]}
+                  style={({ pressed }) => [
+                    styles.settingRow,
+                    { borderBottomColor: colors.hairline },
+                    pressed && styles.itemPressed,
+                  ]}
                 >
-                  <Text style={[styles.settingValue, { color: colors.primary }]}>Haptik</Text>
-                  <Text style={[styles.settingAction, { color: colors.accent }]}>{hapticsEnabled ? 'Açık' : 'Kapalı'}</Text>
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>Haptik Titreşim</Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>Dokunsal fiziksel geri bildirim</Text>
+                  </View>
+                  <View pointerEvents="none">
+                    <ModernSwitch
+                      value={hapticsEnabled}
+                      onValueChange={() => {}}
+                      checkedBg={colors.accent}
+                      uncheckedBg={colors.hairline}
+                      accessibilityLabel="Haptik titreşim anahtarı"
+                    />
+                  </View>
                 </Pressable>
               </View>
             )}
+
+            {activeIndex === 5 && (
+              <View style={styles.drawerSection}>
+                <Pressable
+                  accessible
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: soundEnabled }}
+                  accessibilityLabel="Akustik ses efektleri anahtarı"
+                  onPress={onToggleSound}
+                  style={({ pressed }) => [
+                    styles.settingRow,
+                    { borderBottomColor: colors.hairline },
+                    pressed && styles.itemPressed,
+                  ]}
+                >
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>Akustik Efektler</Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>528Hz & 432Hz odak ve mekanik tonlar</Text>
+                  </View>
+                  <View pointerEvents="none">
+                    <ModernSwitch
+                      value={soundEnabled}
+                      onValueChange={() => {}}
+                      checkedBg={colors.accent}
+                      uncheckedBg={colors.hairline}
+                      accessibilityLabel="Akustik ses efektleri anahtarı"
+                    />
+                  </View>
+                </Pressable>
+              </View>
+            )}
+
           </View>
       </Animated.View>
     </>
@@ -297,12 +401,18 @@ function FocusEngineScreen() {
   const [elapsed, setElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isPreferencesLoaded, setIsPreferencesLoaded] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
   const [activeMenuIndex, setActiveMenuIndex] = useState(0);
   const [sessionMinutes, setSessionMinutes] = useState(25);
   const [durationDraft, setDurationDraft] = useState('25');
   const [theme, setTheme] = useState<ThemeMode>('dark');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [completedSessions, setCompletedSessions] = useState(0);
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0);
   const translateY = useSharedValue(0);
   const gestureStartY = useSharedValue(0);
   const runningScale = useSharedValue(1);
@@ -320,6 +430,13 @@ function FocusEngineScreen() {
     setDurationDraft(String(preferences.sessionMinutes));
     setTheme(preferences.theme);
     setNotificationsEnabled(preferences.notificationsEnabled);
+    setHapticsEnabled(preferences.hapticsEnabled);
+    setSoundEnabled(preferences.soundEnabled);
+    setSoundEngineEnabled(preferences.soundEnabled);
+    setOnboardingCompleted(preferences.onboardingCompleted);
+    setCompletedSessions(preferences.completedSessions);
+    setTotalFocusMinutes(preferences.totalFocusMinutes);
+    setIsPreferencesLoaded(true);
 
     const persisted = loadTimerState();
     const restoredElapsed = persisted.isRunning && persisted.startedAt
@@ -354,6 +471,17 @@ function FocusEngineScreen() {
         runningRef.current = false;
         setElapsed(sessionSeconds);
         setIsRunning(false);
+        setShowCompletion(true);
+        const preferences = loadPreferences();
+        const nextCompletedSessions = preferences.completedSessions + 1;
+        const nextTotalFocusMinutes = preferences.totalFocusMinutes + sessionMinutes;
+        setCompletedSessions(nextCompletedSessions);
+        setTotalFocusMinutes(nextTotalFocusMinutes);
+        savePreferences({
+          ...preferences,
+          completedSessions: nextCompletedSessions,
+          totalFocusMinutes: nextTotalFocusMinutes,
+        });
         scheduledNotificationIdRef.current = null;
         saveTimerState({
           elapsed: sessionSeconds,
@@ -364,6 +492,7 @@ function FocusEngineScreen() {
         if (hapticsEnabled) {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
+        void playFocusCompleteSound();
         return;
       }
 
@@ -420,14 +549,17 @@ function FocusEngineScreen() {
   }, [isRunning, notificationsEnabled, scheduleCompletion]);
 
   const toggleTimer = useCallback(() => {
+    setShowCompletion(false);
     const nextRunning = !runningRef.current;
     const now = Date.now();
 
     runningRef.current = nextRunning;
     setIsRunning(nextRunning);
     if (nextRunning) {
+      void playFocusStartSound();
       void scheduleCompletion();
     } else {
+      void playTickSound();
       clearScheduledCompletion();
     }
     saveTimerState({
@@ -447,6 +579,7 @@ function FocusEngineScreen() {
     setIsRunning(false);
     saveTimerState({ elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null });
 
+    void playResetSound();
     if (hapticsEnabled) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -458,6 +591,11 @@ function FocusEngineScreen() {
         .minDistance(0)
         .onStart(() => {
           gestureStartY.value = translateY.value;
+          runningScale.value = withSpring(0.982, {
+            damping: 18,
+            stiffness: 420,
+            mass: 0.55,
+          });
         })
         .onUpdate((event) => {
           translateY.value = gestureStartY.value + rubberBand(event.translationY, height);
@@ -472,6 +610,11 @@ function FocusEngineScreen() {
             stiffness: shouldToggle || shouldReset ? 220 : 250,
             velocity: event.velocityY,
           });
+          runningScale.value = withSpring(isRunning ? 1.012 : 1, {
+            damping: 22,
+            stiffness: 300,
+            mass: 0.7,
+          });
 
           if (shouldReset) {
             runOnJS(resetTimer)();
@@ -479,7 +622,7 @@ function FocusEngineScreen() {
             runOnJS(toggleTimer)();
           }
         }),
-    [gestureStartY, height, resetTimer, toggleTimer, translateY],
+    [gestureStartY, height, isRunning, resetTimer, toggleTimer, translateY],
   );
 
   const animatedCounterStyle = useAnimatedStyle(() => ({
@@ -487,14 +630,19 @@ function FocusEngineScreen() {
   }));
 
   const progress = Math.min(elapsed / (sessionMinutes * 60), 1);
-  const saveCurrentPreferences = useCallback((next: Partial<{ sessionMinutes: number; theme: ThemeMode; notificationsEnabled: boolean }>) => {
+  const saveCurrentPreferences = useCallback((next: Partial<FocusPreferences>) => {
     savePreferences({
       sessionMinutes,
       theme,
       notificationsEnabled,
+      hapticsEnabled,
+      soundEnabled,
+      onboardingCompleted,
+      completedSessions,
+      totalFocusMinutes,
       ...next,
     });
-  }, [notificationsEnabled, sessionMinutes, theme]);
+  }, [completedSessions, hapticsEnabled, notificationsEnabled, onboardingCompleted, sessionMinutes, soundEnabled, theme, totalFocusMinutes]);
 
   const commitDuration = useCallback(() => {
     const parsed = Number.parseInt(durationDraft, 10);
@@ -514,6 +662,7 @@ function FocusEngineScreen() {
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
+    void playTickSound();
   }, [hapticsEnabled, saveCurrentPreferences]);
 
   const handleThemeChange = useCallback((nextTheme: ThemeMode) => {
@@ -522,6 +671,7 @@ function FocusEngineScreen() {
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
+    void playTickSound();
   }, [hapticsEnabled, saveCurrentPreferences]);
 
   const handleNotificationsToggle = useCallback(async () => {
@@ -529,27 +679,57 @@ function FocusEngineScreen() {
       clearScheduledCompletion();
       setNotificationsEnabled(false);
       saveCurrentPreferences({ notificationsEnabled: false });
-      return;
-    }
-
-    const granted = await requestNotificationPermission();
-    if (!granted) {
+      if (hapticsEnabled) {
+        void Haptics.selectionAsync();
+      }
+      void playTickSound();
       return;
     }
 
     setNotificationsEnabled(true);
     saveCurrentPreferences({ notificationsEnabled: true });
-    if (runningRef.current) {
-      await scheduleCompletion(true);
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+
+    try {
+      const granted = await requestNotificationPermission();
+      if (granted && runningRef.current) {
+        await scheduleCompletion(true);
+      }
+    } catch {
+      // safe fallback
+    }
+  }, [clearScheduledCompletion, hapticsEnabled, notificationsEnabled, saveCurrentPreferences, scheduleCompletion]);
+
+  const handleToggleHaptics = useCallback(() => {
+    const nextHapticsEnabled = !hapticsEnabled;
+    setHapticsEnabled(nextHapticsEnabled);
+    saveCurrentPreferences({ hapticsEnabled: nextHapticsEnabled });
+    if (nextHapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
+  const handleToggleSound = useCallback(() => {
+    const nextSoundEnabled = !soundEnabled;
+    setSoundEnabled(nextSoundEnabled);
+    setSoundEngineEnabled(nextSoundEnabled);
+    saveCurrentPreferences({ soundEnabled: nextSoundEnabled });
+    if (nextSoundEnabled) {
+      void playTickSound();
     }
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
-  }, [clearScheduledCompletion, hapticsEnabled, notificationsEnabled, saveCurrentPreferences, scheduleCompletion]);
+  }, [hapticsEnabled, saveCurrentPreferences, soundEnabled]);
 
   const openDrawer = useCallback(() => {
     setIsDrawerOpen(true);
     triggerImpact(Haptics.ImpactFeedbackStyle.Light);
+    void playTickSound();
   }, [triggerImpact]);
 
   const closeDrawer = useCallback(() => {
@@ -561,7 +741,30 @@ function FocusEngineScreen() {
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
+    void playTickSound();
   }, [hapticsEnabled]);
+
+  const completeOnboarding = useCallback((preferences: FocusPreferences) => {
+    savePreferences(preferences);
+    setSessionMinutes(preferences.sessionMinutes);
+    setDurationDraft(String(preferences.sessionMinutes));
+    setNotificationsEnabled(preferences.notificationsEnabled);
+    setHapticsEnabled(preferences.hapticsEnabled);
+    setSoundEnabled(preferences.soundEnabled);
+    setSoundEngineEnabled(preferences.soundEnabled);
+    setOnboardingCompleted(true);
+    setCompletedSessions(preferences.completedSessions);
+    setTotalFocusMinutes(preferences.totalFocusMinutes);
+    void playFocusStartSound();
+  }, []);
+
+  if (!isPreferencesLoaded) {
+    return <View style={[styles.screen, { backgroundColor: colors.background }]} />;
+  }
+
+  if (!onboardingCompleted) {
+    return <OnboardingScreen colors={colors} onComplete={completeOnboarding} />;
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -581,34 +784,68 @@ function FocusEngineScreen() {
             <View style={[styles.menuLine, { backgroundColor: colors.primary }]} />
             <View style={[styles.menuLine, styles.menuLineShort, { backgroundColor: colors.primary }]} />
           </Pressable>
+          <View pointerEvents="none" style={styles.topMeta}>
+            <Text style={[styles.topMetaTitle, { color: colors.primary }]}>Focus</Text>
+            <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>{sessionMinutes} dk</Text>
+          </View>
         </View>
 
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.focusSurface, animatedCounterStyle]}>
-            <View
-              style={styles.focusContent}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={isRunning ? 'Odaklanma sayacını duraklat' : 'Odaklanma sayacını başlat'}
-              accessibilityHint="Başlatmak veya duraklatmak için dokunun. Aşağı çekerek sıfırlayabilirsiniz."
-              onAccessibilityTap={toggleTimer}
-            >
-              <Text style={[styles.counter, { color: colors.primary }]} maxFontSizeMultiplier={1.25}>
-                {formatElapsed(elapsed)}
-              </Text>
-              <View style={[styles.progressRail, { backgroundColor: colors.hairline }]}>
-                <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accent }]} />
-              </View>
-              <Text style={[styles.state, { color: isRunning ? colors.accent : colors.secondary }]}>
-                {isRunning ? 'Çalışıyor' : 'Hazır'}
-              </Text>
-            </View>
+          <Animated.View
+            style={[styles.focusSurface, animatedCounterStyle]}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={isRunning ? 'Odaklanma sayacını duraklat' : 'Odaklanma sayacını başlat'}
+            accessibilityHint="Başlatmak veya duraklatmak için dokunun. Aşağı çekerek sıfırlayabilirsiniz."
+            onAccessibilityTap={toggleTimer}
+          >
+            <MainFocus3D
+              isRunning={isRunning}
+              elapsedText={formatElapsed(elapsed)}
+              progress={progress}
+              sessionMinutes={sessionMinutes}
+              accentColor={colors.accent}
+              primaryColor={colors.primary}
+              secondaryColor={colors.secondary}
+              mutedColor={colors.muted}
+              hairlineColor={colors.hairline}
+              translateY={translateY}
+              reducedMotion={Boolean(reduceMotion)}
+            />
           </Animated.View>
         </GestureDetector>
 
-        <View pointerEvents="none" style={[styles.footer, { bottom: insets.bottom + 26 }]}> 
-          <Text style={[styles.hint, { color: colors.muted }]}>Dokun · yukarı fırlat · aşağı çek sıfırla</Text>
+        <View style={[styles.footer, { bottom: insets.bottom + 26 }]}>
+          <Text style={[styles.hint, { color: colors.muted }]}>Dokunarak başlat / durdur</Text>
+          {(elapsed > 0 || showCompletion) && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Sayacı sıfırla"
+              hitSlop={12}
+              onPress={resetTimer}
+              style={({ pressed }) => [styles.resetButton, pressed && styles.itemPressed]}
+            >
+              <Text style={[styles.resetButtonText, { color: colors.accent }]}>[ SIFIRLA ]</Text>
+            </Pressable>
+          )}
         </View>
+
+        {showCompletion && (
+          <View style={[styles.completionBanner, { borderBottomColor: colors.hairline }]}>
+            <View style={styles.completionCopy}>
+              <Text style={[styles.completionTitle, { color: colors.primary }]}>OTURUM TAMAMLANDI</Text>
+              <Text style={[styles.completionSubtitle, { color: colors.secondary }]}>Hedeflenen odak süresine ulaştın.</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Yeni oturum başlat"
+              onPress={resetTimer}
+              style={({ pressed }) => [styles.completionAction, pressed && styles.itemPressed]}
+            >
+              <Text style={[styles.completionActionText, { color: colors.accent }]}>YENİ</Text>
+            </Pressable>
+          </View>
+        )}
 
         <FocusDrawer
           drawerWidth={drawerWidth}
@@ -619,6 +856,9 @@ function FocusEngineScreen() {
           theme={theme}
           hapticsEnabled={hapticsEnabled}
           notificationsEnabled={notificationsEnabled}
+          soundEnabled={soundEnabled}
+          completedSessions={completedSessions}
+          totalFocusMinutes={totalFocusMinutes}
           colors={colors}
           onClose={closeDrawer}
           onSelect={handleMenuSelect}
@@ -626,15 +866,11 @@ function FocusEngineScreen() {
           onCommitDuration={commitDuration}
           onSelectPreset={selectPreset}
           onThemeChange={handleThemeChange}
-          onToggleHaptics={() => {
-            if (hapticsEnabled) {
-              void Haptics.selectionAsync();
-            }
-            setHapticsEnabled((current) => !current);
-          }}
+          onToggleHaptics={handleToggleHaptics}
           onToggleNotifications={() => {
             void handleNotificationsToggle();
           }}
+          onToggleSound={handleToggleSound}
         />
       </View>
     </GestureHandlerRootView>
@@ -653,6 +889,282 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  onboardingSlide: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  onboardingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+  },
+  onboardingBrand: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+  },
+  onboardingStep: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+  },
+  onboardingPager: {
+    flex: 1,
+    marginHorizontal: -24,
+  },
+  artworkStage: {
+    width: '100%',
+    height: 300,
+    marginBottom: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artworkOrbit: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 1,
+  },
+  artworkOrbitSmall: {
+    position: 'absolute',
+    width: 188,
+    height: 188,
+    borderRadius: 94,
+    borderWidth: 1,
+    transform: [{ rotate: '24deg' }],
+  },
+  artworkCore: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 18px 34px rgba(0, 0, 0, 0.3)',
+  },
+  artworkCoreTime: {
+    fontFamily: 'System',
+    fontSize: 44,
+    fontWeight: '300',
+    letterSpacing: -1.4,
+  },
+  artworkCoreLabel: {
+    marginTop: 3,
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+  },
+  artworkSatellite: {
+    position: 'absolute',
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    transform: [{ translateX: 128 }, { translateY: -54 }],
+  },
+  artworkDial: {
+    width: 224,
+    height: 224,
+    borderRadius: 112,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artworkTick: {
+    position: 'absolute',
+    width: 2,
+    height: 12,
+    borderRadius: 1,
+  },
+  artworkDialValue: {
+    fontFamily: 'System',
+    fontSize: 48,
+    fontWeight: '300',
+    letterSpacing: -1.5,
+  },
+  artworkDialLabel: {
+    marginTop: 4,
+    fontFamily: 'System',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  artworkFinishRing: {
+    width: 226,
+    height: 226,
+    borderRadius: 113,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artworkFinishMark: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 12px 24px rgba(0, 0, 0, 0.22)',
+  },
+  artworkFinishText: {
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  onboardingSettings: {
+    width: '100%',
+    marginTop: 20,
+  },
+  onboardingFooter: {
+    paddingTop: 18,
+  },
+  onboarding: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 72,
+    paddingBottom: 28,
+    justifyContent: 'space-between',
+  },
+  onboardingVisual: {
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingOrbOuter: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 1,
+  },
+  onboardingOrbMiddle: {
+    position: 'absolute',
+    width: 218,
+    height: 218,
+    borderRadius: 109,
+    borderWidth: 1,
+  },
+  onboardingOrbInner: {
+    width: 142,
+    height: 142,
+    borderRadius: 71,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    boxShadow: '0px 14px 24px rgba(0, 0, 0, 0.22)',
+  },
+  onboardingOrbTime: {
+    fontFamily: 'System',
+    fontSize: 42,
+    fontWeight: '300',
+    letterSpacing: -1,
+  },
+  onboardingOrbUnit: {
+    marginTop: 2,
+    fontFamily: 'System',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  onboardingContent: {
+    minHeight: 248,
+  },
+  onboardingProgress: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 24,
+  },
+  onboardingProgressItem: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+  },
+  onboardingTitle: {
+    maxWidth: 320,
+    fontFamily: 'System',
+    fontSize: 32,
+    fontWeight: '600',
+    letterSpacing: -0.8,
+    lineHeight: 38,
+  },
+  onboardingBody: {
+    maxWidth: 320,
+    marginTop: 12,
+    fontFamily: 'System',
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+  onboardingChoices: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 28,
+  },
+  onboardingChoice: {
+    width: 92,
+    height: 82,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingChoiceValue: {
+    fontFamily: 'System',
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  onboardingChoiceLabel: {
+    marginTop: 3,
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  onboardingSetting: {
+    minHeight: 58,
+    marginTop: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+  },
+  onboardingSettingText: {
+    fontFamily: 'System',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  switchTrack: {
+    width: 42,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+  },
+  switchThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.16)',
+  },
+  onboardingButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingButtonPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.985 }],
+  },
+  onboardingButtonText: {
+    fontFamily: 'System',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   screen: {
     flex: 1,
     backgroundColor: '#000000',
@@ -662,7 +1174,25 @@ const styles = StyleSheet.create({
   topBar: {
     position: 'absolute',
     left: 24,
+    right: 24,
     zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  topBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topOnboardingButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  topOnboardingText: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
   },
   menuButton: {
     width: 44,
@@ -681,12 +1211,42 @@ const styles = StyleSheet.create({
   menuLineShort: {
     width: 16,
   },
+  topMeta: {
+    marginLeft: 16,
+  },
+  topMetaTitle: {
+    fontFamily: 'System',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  topMetaSubtitle: {
+    marginTop: 2,
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  },
   focusSurface: {
-    width: 300,
-    height: 300,
+    width: 320,
+    height: 320,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -24,
+  },
+  focusAura: {
+    position: 'absolute',
+    width: 292,
+    height: 292,
+    borderRadius: 146,
+    borderWidth: 1,
+  },
+  focusRing: {
+    position: 'absolute',
+    width: 248,
+    height: 248,
+    borderRadius: 124,
+    borderWidth: 1,
   },
   focusContent: {
     zIndex: 1,
@@ -714,13 +1274,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A84FF',
   },
   state: {
-    marginTop: 16,
     color: '#B5B6BF',
     fontFamily: 'System',
     fontSize: 15,
     fontWeight: '500',
     letterSpacing: 0.1,
     textAlign: 'center',
+  },
+  stateRow: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stateDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   footer: {
     position: 'absolute',
@@ -732,6 +1302,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.1,
+  },
+  resetButton: {
+    marginTop: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetButtonText: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
+  completionBanner: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    bottom: 96,
+    minHeight: 56,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+  },
+  completionMark: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completionMarkText: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  completionCopy: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  completionTitle: {
+    fontFamily: 'System',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  completionSubtitle: {
+    marginTop: 3,
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  completionAction: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completionActionText: {
+    fontFamily: 'System',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrim: {
     zIndex: 4,
@@ -797,6 +1429,30 @@ const styles = StyleSheet.create({
   drawerSection: {
     marginTop: 28,
   },
+  drawerSummary: {
+    marginTop: 28,
+  },
+  summaryRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  summaryValue: {
+    fontFamily: 'System',
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  summaryLabel: {
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  summaryDivider: {
+    width: 1,
+    height: 18,
+    marginHorizontal: 4,
+  },
   sectionLabel: {
     color: '#B5B6BF',
     fontFamily: 'System',
@@ -805,18 +1461,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   settingRow: {
-    minHeight: 52,
-    marginTop: 12,
+    minHeight: 56,
+    marginTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#2A2C33',
+    paddingBottom: 14,
+  },
+  settingTextGroup: {
+    flex: 1,
+    paddingRight: 16,
   },
   settingValue: {
     color: '#F5F5F7',
     fontFamily: 'System',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+  },
+  settingSubtitle: {
+    marginTop: 3,
+    fontFamily: 'System',
+    fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0,
   },
@@ -881,4 +1549,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
+  summaryBlock: {
+    alignItems: 'baseline',
+    gap: 6,
+    flexDirection: 'row',
+  },
+  drawerBottomActions: {
+    marginTop: 40,
+    paddingTop: 16,
+  },
+  drawerOnboardingBtn: {
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2A2C33',
+  },
+  drawerOnboardingBtnText: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+  },
 });
+
+
+
+
+

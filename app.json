@@ -8,7 +8,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      "expo-audio"
     ],
     "ios": {
       "supportsTablet": true,
