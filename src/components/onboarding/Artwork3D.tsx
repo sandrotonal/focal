@@ -13,16 +13,19 @@ import type { SharedValue } from 'react-native-reanimated';
 import type { AppColors, RhythmOption } from './types';
 import { playTickSound } from '../../audio/soundEngine';
 import { ModernSwitch } from '../ui/ModernSwitch';
+import { translations, Language } from '../../i18n/translations';
 
 // ==========================================
 // 1. SLIDE 1: 3D PRECISION KINETIC GYROSCOPE
 // ==========================================
 export const ArtworkFocusCore3D: React.FC<{
   colors: AppColors;
+  language: Language;
   scrollX: SharedValue<number>;
   width: number;
   reducedMotion: boolean;
-}> = ({ colors, scrollX, width, reducedMotion }) => {
+}> = ({ colors, language, scrollX, width, reducedMotion }) => {
+  const t = translations[language];
   const rotationZ = useSharedValue(0);
   const rotationY = useSharedValue(0);
 
@@ -106,7 +109,9 @@ export const ArtworkFocusCore3D: React.FC<{
       <Animated.View style={[styles.centerMonolith, centerParallax]}>
         <Text style={[styles.crosshair, { color: colors.accent }]}>+</Text>
         <Text style={[styles.digitalNumeral, { color: colors.primary }]}>25:00</Text>
-        <Text style={[styles.telemetryTag, { color: colors.muted }]}>CALIBRATED // 0MS</Text>
+        <Text style={[styles.telemetryTag, { color: colors.muted }]}>
+          {t.onboarding.slide1.tag}
+        </Text>
       </Animated.View>
     </View>
   );
@@ -115,29 +120,52 @@ export const ArtworkFocusCore3D: React.FC<{
 // ==========================================
 // 2. SLIDE 2: MINIMALIST PRECISION RHYTHM SELECTOR
 // ==========================================
-export const RHYTHM_OPTIONS: RhythmOption[] = [
-  { minutes: 25, label: 'Pomodoro', tag: '01', subtitle: 'Kısa sprint & yüksek momentum' },
-  { minutes: 45, label: 'Deep Work', tag: '02', subtitle: 'Yoğun zihinsel odak' },
-  { minutes: 60, label: 'Flow State', tag: '03', subtitle: 'Kesintisiz tek blok' },
-  { minutes: 90, label: 'Ultra Sprint', tag: '04', subtitle: 'Maksimum dayanıklılık seansı' },
-];
-
 export const ArtworkRhythmPicker: React.FC<{
   colors: AppColors;
+  language: Language;
   selectedMinutes: number;
   onSelect: (minutes: number) => void;
   hapticsEnabled: boolean;
-}> = ({ colors, selectedMinutes, onSelect, hapticsEnabled }) => {
+}> = ({ colors, language, selectedMinutes, onSelect, hapticsEnabled }) => {
+  const t = translations[language];
+
+  const rhythmOptions: RhythmOption[] = [
+    {
+      minutes: 25,
+      label: t.onboarding.slide2.pomodoro.label,
+      tag: '01',
+      subtitle: t.onboarding.slide2.pomodoro.subtitle,
+    },
+    {
+      minutes: 45,
+      label: t.onboarding.slide2.deepWork.label,
+      tag: '02',
+      subtitle: t.onboarding.slide2.deepWork.subtitle,
+    },
+    {
+      minutes: 60,
+      label: t.onboarding.slide2.flowState.label,
+      tag: '03',
+      subtitle: t.onboarding.slide2.flowState.subtitle,
+    },
+    {
+      minutes: 90,
+      label: t.onboarding.slide2.ultraSprint.label,
+      tag: '04',
+      subtitle: t.onboarding.slide2.ultraSprint.subtitle,
+    },
+  ];
+
   return (
     <View style={styles.rhythmList}>
-      {RHYTHM_OPTIONS.map((item) => {
+      {rhythmOptions.map((item) => {
         const isSelected = selectedMinutes === item.minutes;
         return (
           <Pressable
             key={item.minutes}
             accessibilityRole="radio"
             accessibilityState={{ selected: isSelected }}
-            accessibilityLabel={`${item.label} ${item.minutes} dakika`}
+            accessibilityLabel={`${item.label} ${item.minutes} ${t.common.minuteShort}`}
             onPress={() => {
               onSelect(item.minutes);
               void playTickSound();
@@ -196,7 +224,7 @@ export const ArtworkRhythmPicker: React.FC<{
                   { color: isSelected ? colors.accent : colors.muted },
                 ]}
               >
-                DK
+                {t.common.minuteShort.toUpperCase()}
               </Text>
               {isSelected && (
                 <View style={[styles.activeAccentBar, { backgroundColor: colors.accent }]} />
@@ -214,207 +242,189 @@ export const ArtworkRhythmPicker: React.FC<{
 // ==========================================
 export const ArtworkSensorySettings: React.FC<{
   colors: AppColors;
+  language: Language;
   notificationsEnabled: boolean;
   hapticsEnabled: boolean;
+  soundEnabled: boolean;
   onToggleNotifications: () => void;
   onToggleHaptics: () => void;
+  onToggleSound: () => void;
 }> = ({
   colors,
+  language,
   notificationsEnabled,
   hapticsEnabled,
+  soundEnabled,
   onToggleNotifications,
   onToggleHaptics,
+  onToggleSound,
 }) => {
-    return (
-      <View style={styles.sensoryList}>
-        {/* Notification Row */}
-        <Pressable
-          accessible
-          accessibilityRole="switch"
-          accessibilityState={{ checked: notificationsEnabled }}
-          accessibilityLabel="Bitiş bildirimi anahtarı"
-          onPress={() => {
-            onToggleNotifications();
-            void playTickSound();
-            if (hapticsEnabled) {
-              try {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {
-                // safe fallback
-              }
-            }
-          }}
-          style={({ pressed }) => [
-            styles.sensoryRow,
-            { borderBottomColor: `${colors.hairline}50`, opacity: pressed ? 0.75 : 1 },
-          ]}
-        >
-          <View style={styles.sensoryTextGroup}>
-            <Text style={[styles.sensoryHeader, { color: colors.primary }]}>
-              Bitiş Bildirimi
-            </Text>
-            <Text style={[styles.sensoryCaption, { color: colors.muted }]}>
-              Zaman dolduğunda sessiz ve odak bozmayan sesli tetikleyici
-            </Text>
-          </View>
-
-          <View pointerEvents="none">
-            <ModernSwitch
-              value={notificationsEnabled}
-              onValueChange={() => { }}
-              checkedBg={colors.accent}
-              uncheckedBg={`${colors.hairline}90`}
-              accessibilityLabel="Bitiş bildirimi anahtarı"
-            />
-          </View>
-        </Pressable>
-
-        {/* Haptics Row */}
-        <Pressable
-          accessible
-          accessibilityRole="switch"
-          accessibilityState={{ checked: hapticsEnabled }}
-          accessibilityLabel="Dokunsal haptik anahtarı"
-          onPress={() => {
-            onToggleHaptics();
-            void playTickSound();
-            if (!hapticsEnabled) {
-              try {
-                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {
-                // safe fallback
-              }
-            }
-          }}
-          style={({ pressed }) => [
-            styles.sensoryRow,
-            { borderBottomColor: `${colors.hairline}50`, opacity: pressed ? 0.75 : 1 },
-          ]}
-        >
-          <View style={styles.sensoryTextGroup}>
-            <Text style={[styles.sensoryHeader, { color: colors.primary }]}>
-              Haptik Dokunuş
-            </Text>
-            <Text style={[styles.sensoryCaption, { color: colors.muted }]}>
-              Başlangıç, dokunuş ve bitişlerde Apple Taptic titreşimi
-            </Text>
-          </View>
-
-          <View pointerEvents="none">
-            <ModernSwitch
-              value={hapticsEnabled}
-              onValueChange={() => { }}
-              checkedBg={colors.accent}
-              uncheckedBg={`${colors.hairline}90`}
-              accessibilityLabel="Dokunsal haptik anahtarı"
-            />
-          </View>
-        </Pressable>
-      </View>
-    );
-  };
-
-// ==========================================
-// 4. SLIDE 4: THE LAUNCHPAD MONOLITH (ZERO EMOJI, ARCHITECTURAL)
-// ==========================================
-export const ArtworkLaunchpad: React.FC<{
-  colors: AppColors;
-  sessionMinutes: number;
-  notificationsEnabled: boolean;
-  hapticsEnabled: boolean;
-}> = ({ colors, sessionMinutes, notificationsEnabled, hapticsEnabled }) => {
-  const pulse = useSharedValue(0);
-
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true
-    );
-  }, [pulse]);
-
-  const radarStyle = useAnimatedStyle(() => {
-    const scale = interpolate(pulse.value, [0, 1], [0.96, 1.04]);
-    const opacity = interpolate(pulse.value, [0, 1], [0.3, 0.7]);
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
-  });
+  const t = translations[language];
 
   return (
-    <View style={styles.launchpadStage}>
-      <Animated.View
-        style={[
-          styles.radarRing,
-          { borderColor: colors.accent },
-          radarStyle,
+    <View style={styles.sensoryList}>
+      {/* Notification Row */}
+      <Pressable
+        accessible
+        accessibilityRole="switch"
+        accessibilityState={{ checked: notificationsEnabled }}
+        accessibilityLabel={t.onboarding.slide3.notifications}
+        onPress={() => {
+          onToggleNotifications();
+          void playTickSound();
+          if (hapticsEnabled) {
+            try {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            } catch {
+              // safe fallback
+            }
+          }
+        }}
+        style={({ pressed }) => [
+          styles.sensoryRow,
+          { borderBottomColor: `${colors.hairline}50`, opacity: pressed ? 0.75 : 1 },
         ]}
-      />
-
-      <View style={styles.readoutGroup}>
-        <View style={styles.readoutHeader}>
-          <Text style={[styles.readoutSystem, { color: colors.accent }]}>
-            SYSTEM // FOCUS ENGINE
+      >
+        <View style={styles.sensoryTextGroup}>
+          <Text style={[styles.sensoryHeader, { color: colors.primary }]}>
+            {t.onboarding.slide3.notifications}
           </Text>
-          <Text style={[styles.readoutStatus, { color: colors.muted }]}>READY</Text>
-        </View>
-
-        <View style={[styles.readoutDivider, { backgroundColor: `${colors.hairline}60` }]} />
-
-        <View style={styles.telemetryRow}>
-          <Text style={[styles.telemetryKey, { color: colors.muted }]}>SEANS SÜRESİ</Text>
-          <Text style={[styles.telemetryValue, { color: colors.primary }]}>
-            {sessionMinutes} DAKİKA
+          <Text style={[styles.sensoryCaption, { color: colors.muted }]}>
+            {t.onboarding.slide3.notificationsCaption}
           </Text>
         </View>
 
-        <View style={styles.telemetryRow}>
-          <Text style={[styles.telemetryKey, { color: colors.muted }]}>BİLDİRİM</Text>
-          <Text style={[styles.telemetryValue, { color: colors.primary }]}>
-            {notificationsEnabled ? 'DEVREDE' : 'SESSİZ'}
+        <View pointerEvents="none">
+          <ModernSwitch
+            value={notificationsEnabled}
+            onValueChange={() => {}}
+            checkedBg={colors.accent}
+            uncheckedBg={`${colors.hairline}90`}
+            crossColor={colors.muted}
+            checkmarkColor="#FFFFFF"
+            accessibilityLabel={t.onboarding.slide3.notifications}
+          />
+        </View>
+      </Pressable>
+
+      {/* Haptics Row */}
+      <Pressable
+        accessible
+        accessibilityRole="switch"
+        accessibilityState={{ checked: hapticsEnabled }}
+        accessibilityLabel={t.onboarding.slide3.haptics}
+        onPress={() => {
+          onToggleHaptics();
+          void playTickSound();
+          if (!hapticsEnabled) {
+            try {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            } catch {
+              // safe fallback
+            }
+          }
+        }}
+        style={({ pressed }) => [
+          styles.sensoryRow,
+          { borderBottomColor: `${colors.hairline}50`, opacity: pressed ? 0.75 : 1 },
+        ]}
+      >
+        <View style={styles.sensoryTextGroup}>
+          <Text style={[styles.sensoryHeader, { color: colors.primary }]}>
+            {t.onboarding.slide3.haptics}
+          </Text>
+          <Text style={[styles.sensoryCaption, { color: colors.muted }]}>
+            {t.onboarding.slide3.hapticsCaption}
           </Text>
         </View>
 
-        <View style={styles.telemetryRow}>
-          <Text style={[styles.telemetryKey, { color: colors.muted }]}>HAPTİK GERİ BİLDİRİM</Text>
-          <Text style={[styles.telemetryValue, { color: colors.primary }]}>
-            {hapticsEnabled ? 'AKTİF' : 'KAPALI'}
+        <View pointerEvents="none">
+          <ModernSwitch
+            value={hapticsEnabled}
+            onValueChange={() => {}}
+            checkedBg={colors.accent}
+            uncheckedBg={`${colors.hairline}90`}
+            crossColor={colors.muted}
+            checkmarkColor="#FFFFFF"
+            accessibilityLabel={t.onboarding.slide3.haptics}
+          />
+        </View>
+      </Pressable>
+
+      {/* Sound Row */}
+      <Pressable
+        accessible
+        accessibilityRole="switch"
+        accessibilityState={{ checked: soundEnabled }}
+        accessibilityLabel={t.onboarding.slide3.sound}
+        onPress={() => {
+          onToggleSound();
+          void playTickSound();
+          if (hapticsEnabled) {
+            try {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            } catch {
+              // safe fallback
+            }
+          }
+        }}
+        style={({ pressed }) => [
+          styles.sensoryRow,
+          { borderBottomColor: `${colors.hairline}50`, opacity: pressed ? 0.75 : 1 },
+        ]}
+      >
+        <View style={styles.sensoryTextGroup}>
+          <Text style={[styles.sensoryHeader, { color: colors.primary }]}>
+            {t.onboarding.slide3.sound}
+          </Text>
+          <Text style={[styles.sensoryCaption, { color: colors.muted }]}>
+            {t.onboarding.slide3.soundCaption}
           </Text>
         </View>
-      </View>
+
+        <View pointerEvents="none">
+          <ModernSwitch
+            value={soundEnabled}
+            onValueChange={() => {}}
+            checkedBg={colors.accent}
+            uncheckedBg={`${colors.hairline}90`}
+            crossColor={colors.muted}
+            checkmarkColor="#FFFFFF"
+            accessibilityLabel={t.onboarding.slide3.sound}
+          />
+        </View>
+      </Pressable>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // Slide 1
+  // Slide 1: Focus Core
   gyroStage: {
-    width: 260,
-    height: 260,
+    width: '100%',
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 20,
   },
   wireRingLarge: {
     position: 'absolute',
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 230,
+    height: 230,
+    borderRadius: 115,
     borderWidth: 1,
   },
   wireRingMedium: {
     position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
     borderWidth: 1,
   },
   wireRingSmall: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     borderWidth: 1,
   },
   centerMonolith: {
@@ -422,34 +432,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   crosshair: {
+    fontFamily: 'System',
     fontSize: 16,
     fontWeight: '300',
     marginBottom: 4,
   },
   digitalNumeral: {
     fontFamily: 'System',
-    fontSize: 36,
-    fontWeight: '300',
+    fontSize: 38,
+    fontWeight: '200',
     letterSpacing: -1,
   },
   telemetryTag: {
     fontFamily: 'System',
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 2,
+    fontWeight: '800',
+    letterSpacing: 2.2,
     marginTop: 6,
   },
 
-  // Slide 2: Rhythm List (Swiss Minimalist, No Card Boxes)
+  // Slide 2: Rhythm List
   rhythmList: {
     width: '100%',
-    marginVertical: 12,
+    paddingTop: 8,
   },
   rhythmRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
   rhythmMeta: {
@@ -465,7 +476,7 @@ const styles = StyleSheet.create({
   },
   rhythmTitle: {
     fontFamily: 'System',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
@@ -503,13 +514,13 @@ const styles = StyleSheet.create({
   // Slide 3: Sensory Settings
   sensoryList: {
     width: '100%',
-    marginVertical: 16,
+    paddingTop: 12,
   },
   sensoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 18,
+    paddingVertical: 15,
     borderBottomWidth: 1,
   },
   sensoryTextGroup: {
@@ -518,7 +529,7 @@ const styles = StyleSheet.create({
   },
   sensoryHeader: {
     fontFamily: 'System',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
@@ -526,74 +537,6 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 3,
-  },
-  iosSwitchTrack: {
-    width: 44,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-  },
-  iosSwitchThumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-  },
-
-  // Slide 4: Launchpad
-  launchpadStage: {
-    width: '100%',
-    alignItems: 'center',
-    marginVertical: 14,
-  },
-  radarRing: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 1,
-    position: 'absolute',
-    top: -20,
-  },
-  readoutGroup: {
-    width: '100%',
-    paddingTop: 40,
-  },
-  readoutHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  readoutSystem: {
-    fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-  readoutStatus: {
-    fontFamily: 'System',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
-  readoutDivider: {
-    height: 1,
-    marginVertical: 14,
-  },
-  telemetryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  telemetryKey: {
-    fontFamily: 'System',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  telemetryValue: {
-    fontFamily: 'System',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    marginTop: 2,
   },
 });

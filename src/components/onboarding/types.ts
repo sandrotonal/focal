@@ -1,8 +1,9 @@
-import type { ThemeMode } from '../../storage/preferencesStorage';
+import type { Language, ThemeMode } from '../../storage/preferencesStorage';
 
 export type FocusPreferences = {
   sessionMinutes: number;
   theme: ThemeMode;
+  language: Language;
   notificationsEnabled: boolean;
   hapticsEnabled: boolean;
   soundEnabled: boolean;

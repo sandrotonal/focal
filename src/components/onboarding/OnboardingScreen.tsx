@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmbientGlow } from './AmbientGlow';
 import {
   ArtworkFocusCore3D,
-  ArtworkLaunchpad,
   ArtworkRhythmPicker,
   ArtworkSensorySettings,
 } from './Artwork3D';
@@ -28,25 +27,34 @@ import { OnboardingSlide3D } from './OnboardingSlide3D';
 import type { AppColors, FocusPreferences } from './types';
 import { requestNotificationPermission } from '../../notifications/notifications';
 import { playFocusStartSound, playTickSound } from '../../audio/soundEngine';
+import { translations, Language } from '../../i18n/translations';
 
 type Props = {
   colors: AppColors;
+  initialLanguage?: Language;
   onComplete: (preferences: FocusPreferences) => void;
 };
 
-export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
+export const OnboardingScreen: React.FC<Props> = ({
+  colors,
+  initialLanguage = 'tr',
+  onComplete,
+}) => {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const scrollRef = useRef<Animated.ScrollView>(null);
   const scrollX = useSharedValue(0);
 
+  const [language, setLanguage] = useState<Language>(initialLanguage);
   const [step, setStep] = useState(0);
   const [sessionMinutes, setSessionMinutes] = useState(25);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const totalSteps = 4;
+  const totalSteps = 3;
+  const t = translations[language];
 
   const triggerHaptic = useCallback((style = Haptics.ImpactFeedbackStyle.Light) => {
     if (hapticsEnabled) {
@@ -58,26 +66,40 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
     }
   }, [hapticsEnabled]);
 
+  const toggleLanguage = useCallback(() => {
+    const nextLang: Language = language === 'tr' ? 'en' : 'tr';
+    setLanguage(nextLang);
+    triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
+    if (soundEnabled) {
+      void playTickSound();
+    }
+  }, [language, soundEnabled, triggerHaptic]);
+
   const finish = useCallback(() => {
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    void playFocusStartSound();
+    if (soundEnabled) {
+      void playFocusStartSound();
+    }
     onComplete({
       sessionMinutes,
       theme: 'dark',
+      language,
       notificationsEnabled,
       hapticsEnabled,
-      soundEnabled: true,
+      soundEnabled,
       onboardingCompleted: true,
       completedSessions: 0,
       totalFocusMinutes: 0,
     });
-  }, [hapticsEnabled, notificationsEnabled, onComplete, sessionMinutes, triggerHaptic]);
+  }, [hapticsEnabled, language, notificationsEnabled, onComplete, sessionMinutes, soundEnabled, triggerHaptic]);
 
   const handleStepChange = useCallback((newStep: number) => {
     setStep(newStep);
     triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
-    void playTickSound();
-  }, [triggerHaptic]);
+    if (soundEnabled) {
+      void playTickSound();
+    }
+  }, [soundEnabled, triggerHaptic]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -112,9 +134,11 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
       });
       setStep(nextStep);
       triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
-      void playTickSound();
+      if (soundEnabled) {
+        void playTickSound();
+      }
     },
-    [finish, notificationsEnabled, reducedMotion, totalSteps, triggerHaptic, width]
+    [finish, notificationsEnabled, reducedMotion, soundEnabled, totalSteps, triggerHaptic, width]
   );
 
   return (
@@ -125,22 +149,39 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
       {/* Minimal Top Header */}
       <View style={[styles.header, { top: insets.top + 12 }]}>
         <View style={styles.brandRow}>
-          <Text style={[styles.brandTitle, { color: colors.primary }]}>FOCUS ENGINE</Text>
+          <Text style={[styles.brandTitle, { color: colors.primary }]}>{t.common.appName}</Text>
         </View>
 
         <View style={styles.headerRight}>
+          {/* Language Switcher Pill */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.drawer.aria.languageSwitch}
+            hitSlop={8}
+            onPress={toggleLanguage}
+            style={({ pressed }) => [
+              styles.langPill,
+              { borderColor: colors.hairline, backgroundColor: `${colors.panel}` },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.langPillText, { color: colors.accent }]}>
+              {language.toUpperCase()}
+            </Text>
+          </Pressable>
+
           <Text style={[styles.stepCounter, { color: colors.muted }]}>
             {`${String(step + 1).padStart(2, '0')} // ${String(totalSteps).padStart(2, '0')}`}
           </Text>
           {step < totalSteps - 1 && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Atla"
+              accessibilityLabel={t.common.skip}
               hitSlop={12}
               onPress={finish}
               style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}
             >
-              <Text style={[styles.skipText, { color: colors.muted }]}>ATLA</Text>
+              <Text style={[styles.skipText, { color: colors.muted }]}>{t.common.skip}</Text>
             </Pressable>
           )}
         </View>
@@ -165,15 +206,16 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
         >
           <ArtworkFocusCore3D
             colors={colors}
+            language={language}
             scrollX={scrollX}
             width={width}
             reducedMotion={Boolean(reducedMotion)}
           />
           <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            Zihnini topla.
+            {t.onboarding.slide1.title}
           </Text>
           <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            Bölünmelerden arınmış minimalist alan. Zamanı başlat ve sadece önündeki tek bir göreve odaklan.
+            {t.onboarding.slide1.body}
           </Text>
         </OnboardingSlide3D>
 
@@ -185,13 +227,14 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
           reducedMotion={Boolean(reducedMotion)}
         >
           <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            Kişisel ritmini seç.
+            {t.onboarding.slide2.title}
           </Text>
           <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            Kısa sprint mi, yoksa kesintisiz derin bir çalışma bloğu mu?
+            {t.onboarding.slide2.body}
           </Text>
           <ArtworkRhythmPicker
             colors={colors}
+            language={language}
             selectedMinutes={sessionMinutes}
             onSelect={setSessionMinutes}
             hapticsEnabled={hapticsEnabled}
@@ -206,39 +249,21 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
           reducedMotion={Boolean(reducedMotion)}
         >
           <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            Duyusal uyarılar.
+            {t.onboarding.slide3.title}
           </Text>
           <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            Seans bitişini kaçırmaman için taptic motor ve bildirimleri yapılandır.
+            {t.onboarding.slide3.body}
           </Text>
           <ArtworkSensorySettings
             colors={colors}
+            language={language}
             notificationsEnabled={notificationsEnabled}
             hapticsEnabled={hapticsEnabled}
+            soundEnabled={soundEnabled}
             onToggleNotifications={() => setNotificationsEnabled((prev) => !prev)}
             onToggleHaptics={() => setHapticsEnabled((prev) => !prev)}
+            onToggleSound={() => setSoundEnabled((prev) => !prev)}
           />
-        </OnboardingSlide3D>
-
-        {/* SLIDE 4 */}
-        <OnboardingSlide3D
-          index={3}
-          width={width}
-          scrollX={scrollX}
-          reducedMotion={Boolean(reducedMotion)}
-        >
-          <ArtworkLaunchpad
-            colors={colors}
-            sessionMinutes={sessionMinutes}
-            notificationsEnabled={notificationsEnabled}
-            hapticsEnabled={hapticsEnabled}
-          />
-          <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            Odak ritüeli hazır.
-          </Text>
-          <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            Seçimlerin kaydedildi. İstediğin zaman sol menüden hızlıca güncelleyebilirsin.
-          </Text>
         </OnboardingSlide3D>
       </Animated.ScrollView>
 
@@ -257,10 +282,10 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
           ))}
         </View>
 
-        {/* Primary Action Button (Architectural, No bubbly borders) */}
+        {/* Primary Action Button */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={step === totalSteps - 1 ? 'Focus Engine başlat' : 'Devam et'}
+          accessibilityLabel={step === totalSteps - 1 ? t.common.start : t.common.continue}
           onPress={() => void moveToStep(step + 1)}
           style={({ pressed }) => [
             styles.ctaButton,
@@ -269,7 +294,7 @@ export const OnboardingScreen: React.FC<Props> = ({ colors, onComplete }) => {
           ]}
         >
           <Text style={[styles.ctaButtonText, { color: colors.background }]}>
-            {step === totalSteps - 1 ? 'RİTÜELİ BAŞLAT' : 'DEVAM ET'}
+            {step === totalSteps - 1 ? t.common.start : t.common.continue}
           </Text>
         </Pressable>
       </View>
@@ -332,7 +357,19 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+  },
+  langPill: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  langPillText: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
   stepCounter: {
     fontFamily: 'System',

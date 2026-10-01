@@ -46,11 +46,13 @@ import {
 } from './src/notifications/notifications';
 import {
   FocusPreferences,
+  Language,
   loadPreferences,
   savePreferences,
   ThemeMode,
 } from './src/storage/preferencesStorage';
 import { loadTimerState, saveTimerState } from './src/storage/timerStorage';
+import { translations } from './src/i18n/translations';
 
 const COLORS = {
   dark: {
@@ -103,6 +105,7 @@ type FocusDrawerProps = {
   sessionMinutes: number;
   durationDraft: string;
   theme: ThemeMode;
+  language: Language;
   hapticsEnabled: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
@@ -115,6 +118,7 @@ type FocusDrawerProps = {
   onCommitDuration: () => void;
   onSelectPreset: (minutes: number) => void;
   onThemeChange: (theme: ThemeMode) => void;
+  onToggleLanguage: () => void;
   onToggleHaptics: () => void;
   onToggleNotifications: () => void;
   onToggleSound: () => void;
@@ -127,6 +131,7 @@ function FocusDrawer({
   sessionMinutes,
   durationDraft,
   theme,
+  language,
   hapticsEnabled,
   notificationsEnabled,
   soundEnabled,
@@ -137,6 +142,7 @@ function FocusDrawer({
   onCommitDuration,
   onSelectPreset,
   onThemeChange,
+  onToggleLanguage,
   onToggleHaptics,
   onToggleNotifications,
   onToggleSound,
@@ -145,6 +151,17 @@ function FocusDrawer({
 }: FocusDrawerProps) {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(-drawerWidth);
+  const t = translations[language];
+
+  const menuItems = [
+    t.drawer.menu.focus,
+    t.drawer.menu.duration,
+    t.drawer.menu.theme,
+    t.drawer.menu.notifications,
+    t.drawer.menu.haptics,
+    t.drawer.menu.sound,
+    t.drawer.menu.language,
+  ];
 
   useEffect(() => {
     translateX.value = withSpring(visible ? 0 : -drawerWidth, {
@@ -170,7 +187,7 @@ function FocusDrawer({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Menüyü kapat"
+          accessibilityLabel={t.mainTimer.ariaMenuClose}
           onPress={onClose}
           style={StyleSheet.absoluteFill}
         />
@@ -185,10 +202,10 @@ function FocusDrawer({
       >
           <View style={[styles.drawerContent, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}>
             <View style={styles.drawerHeader}>
-              <Text style={[styles.drawerTitle, { color: colors.primary }]}>KONTROL</Text>
+              <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Menüyü kapat"
+                accessibilityLabel={t.mainTimer.ariaMenuClose}
                 hitSlop={12}
                 onPress={onClose}
                 style={({ pressed }) => [styles.closeButton, pressed && styles.itemPressed]}
@@ -199,7 +216,7 @@ function FocusDrawer({
             </View>
 
             <LineSidebar
-              items={MENU_ITEMS}
+              items={menuItems}
               activeIndex={activeIndex}
               onSelect={onSelect}
               colors={colors}
@@ -210,12 +227,12 @@ function FocusDrawer({
                 <View style={styles.summaryRow}>
                   <View style={styles.summaryBlock}>
                     <Text style={[styles.summaryValue, { color: colors.primary }]}>{completedSessions}</Text>
-                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>OTURUM</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.sessions}</Text>
                   </View>
                   <View style={[styles.summaryDivider, { backgroundColor: colors.hairline }]} />
                   <View style={styles.summaryBlock}>
                     <Text style={[styles.summaryValue, { color: colors.primary }]}>{totalFocusMinutes}</Text>
-                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>DAKİKA</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.minutes}</Text>
                   </View>
                 </View>
               </View>
@@ -226,7 +243,7 @@ function FocusDrawer({
               <View style={styles.drawerSection}>
                 <View style={styles.durationEditor}>
                   <TextInput
-                    accessibilityLabel="Oturum süresi dakika"
+                    accessibilityLabel={t.drawer.sections.focusDuration}
                     keyboardType="number-pad"
                     maxLength={3}
                     onBlur={onCommitDuration}
@@ -237,14 +254,14 @@ function FocusDrawer({
                     style={[styles.durationInput, { color: colors.primary, borderBottomColor: colors.hairline }]}
                     value={durationDraft}
                   />
-                  <Text style={[styles.durationUnit, { color: colors.secondary }]}>dk</Text>
+                  <Text style={[styles.durationUnit, { color: colors.secondary }]}>{t.common.minuteShort}</Text>
                 </View>
                 <View style={styles.presetRow}>
                   {SESSION_OPTIONS.map((option) => (
                     <Pressable
                       key={option}
                       accessibilityRole="button"
-                      accessibilityLabel={`${option} dakika seç`}
+                      accessibilityLabel={`${option} ${t.common.minuteShort}`}
                       onPress={() => onSelectPreset(option)}
                       style={({ pressed }) => [
                         styles.preset,
@@ -267,7 +284,7 @@ function FocusDrawer({
                   accessible
                   accessibilityRole="switch"
                   accessibilityState={{ checked: theme === 'dark' }}
-                  accessibilityLabel="Karanlık tema anahtarı"
+                  accessibilityLabel={t.drawer.aria.themeSwitch}
                   onPress={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
                   style={({ pressed }) => [
                     styles.settingRow,
@@ -277,10 +294,10 @@ function FocusDrawer({
                 >
                   <View style={styles.settingTextGroup}>
                     <Text style={[styles.settingValue, { color: colors.primary }]}>
-                      {theme === 'dark' ? 'Karanlık Mod' : 'Aydınlık Mod'}
+                      {theme === 'dark' ? t.drawer.sections.darkMode : t.drawer.sections.lightMode}
                     </Text>
                     <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
-                      {theme === 'dark' ? 'OLED saf siyah arayüz' : 'Yüksek kontrastlı aydınlık arayüz'}
+                      {theme === 'dark' ? t.drawer.sections.darkSubtitle : t.drawer.sections.lightSubtitle}
                     </Text>
                   </View>
                   <View pointerEvents="none">
@@ -289,7 +306,9 @@ function FocusDrawer({
                       onValueChange={() => {}}
                       checkedBg={colors.accent}
                       uncheckedBg={colors.hairline}
-                      accessibilityLabel="Karanlık tema anahtarı"
+                      crossColor={colors.muted}
+                      checkmarkColor="#FFFFFF"
+                      accessibilityLabel={t.drawer.aria.themeSwitch}
                     />
                   </View>
                 </Pressable>
@@ -302,7 +321,7 @@ function FocusDrawer({
                   accessible
                   accessibilityRole="switch"
                   accessibilityState={{ checked: notificationsEnabled }}
-                  accessibilityLabel="Bitiş bildirimi anahtarı"
+                  accessibilityLabel={t.drawer.aria.notificationsSwitch}
                   onPress={onToggleNotifications}
                   style={({ pressed }) => [
                     styles.settingRow,
@@ -311,8 +330,8 @@ function FocusDrawer({
                   ]}
                 >
                   <View style={styles.settingTextGroup}>
-                    <Text style={[styles.settingValue, { color: colors.primary }]}>Bitiş Bildirimi</Text>
-                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>Seans tamamlandığında sistem uyarısı</Text>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.notificationsTitle}</Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.notificationsSubtitle}</Text>
                   </View>
                   <View pointerEvents="none">
                     <ModernSwitch
@@ -320,7 +339,9 @@ function FocusDrawer({
                       onValueChange={() => {}}
                       checkedBg={colors.accent}
                       uncheckedBg={colors.hairline}
-                      accessibilityLabel="Bitiş bildirimi anahtarı"
+                      crossColor={colors.muted}
+                      checkmarkColor="#FFFFFF"
+                      accessibilityLabel={t.drawer.aria.notificationsSwitch}
                     />
                   </View>
                 </Pressable>
@@ -333,7 +354,7 @@ function FocusDrawer({
                   accessible
                   accessibilityRole="switch"
                   accessibilityState={{ checked: hapticsEnabled }}
-                  accessibilityLabel="Haptik titreşim anahtarı"
+                  accessibilityLabel={t.drawer.aria.hapticsSwitch}
                   onPress={onToggleHaptics}
                   style={({ pressed }) => [
                     styles.settingRow,
@@ -342,8 +363,8 @@ function FocusDrawer({
                   ]}
                 >
                   <View style={styles.settingTextGroup}>
-                    <Text style={[styles.settingValue, { color: colors.primary }]}>Haptik Titreşim</Text>
-                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>Dokunsal fiziksel geri bildirim</Text>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.hapticsTitle}</Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.hapticsSubtitle}</Text>
                   </View>
                   <View pointerEvents="none">
                     <ModernSwitch
@@ -351,7 +372,9 @@ function FocusDrawer({
                       onValueChange={() => {}}
                       checkedBg={colors.accent}
                       uncheckedBg={colors.hairline}
-                      accessibilityLabel="Haptik titreşim anahtarı"
+                      crossColor={colors.muted}
+                      checkmarkColor="#FFFFFF"
+                      accessibilityLabel={t.drawer.aria.hapticsSwitch}
                     />
                   </View>
                 </Pressable>
@@ -364,7 +387,7 @@ function FocusDrawer({
                   accessible
                   accessibilityRole="switch"
                   accessibilityState={{ checked: soundEnabled }}
-                  accessibilityLabel="Akustik ses efektleri anahtarı"
+                  accessibilityLabel={t.drawer.aria.soundSwitch}
                   onPress={onToggleSound}
                   style={({ pressed }) => [
                     styles.settingRow,
@@ -373,8 +396,8 @@ function FocusDrawer({
                   ]}
                 >
                   <View style={styles.settingTextGroup}>
-                    <Text style={[styles.settingValue, { color: colors.primary }]}>Akustik Efektler</Text>
-                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>528Hz & 432Hz odak ve mekanik tonlar</Text>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.soundTitle}</Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.soundSubtitle}</Text>
                   </View>
                   <View pointerEvents="none">
                     <ModernSwitch
@@ -382,7 +405,46 @@ function FocusDrawer({
                       onValueChange={() => {}}
                       checkedBg={colors.accent}
                       uncheckedBg={colors.hairline}
-                      accessibilityLabel="Akustik ses efektleri anahtarı"
+                      crossColor={colors.muted}
+                      checkmarkColor="#FFFFFF"
+                      accessibilityLabel={t.drawer.aria.soundSwitch}
+                    />
+                  </View>
+                </Pressable>
+              </View>
+            )}
+
+            {activeIndex === 6 && (
+              <View style={styles.drawerSection}>
+                <Pressable
+                  accessible
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: language === 'en' }}
+                  accessibilityLabel={t.drawer.aria.languageSwitch}
+                  onPress={onToggleLanguage}
+                  style={({ pressed }) => [
+                    styles.settingRow,
+                    { borderBottomColor: colors.hairline },
+                    pressed && styles.itemPressed,
+                  ]}
+                >
+                  <View style={styles.settingTextGroup}>
+                    <Text style={[styles.settingValue, { color: colors.primary }]}>
+                      {language === 'tr' ? 'Türkçe (TR)' : 'English (EN)'}
+                    </Text>
+                    <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                      {t.drawer.sections.languageSubtitle}
+                    </Text>
+                  </View>
+                  <View pointerEvents="none">
+                    <ModernSwitch
+                      value={language === 'en'}
+                      onValueChange={() => {}}
+                      checkedBg={colors.accent}
+                      uncheckedBg={colors.hairline}
+                      crossColor={colors.muted}
+                      checkmarkColor="#FFFFFF"
+                      accessibilityLabel={t.drawer.aria.languageSwitch}
                     />
                   </View>
                 </Pressable>
@@ -408,6 +470,7 @@ function FocusEngineScreen() {
   const [sessionMinutes, setSessionMinutes] = useState(25);
   const [durationDraft, setDurationDraft] = useState('25');
   const [theme, setTheme] = useState<ThemeMode>('dark');
+  const [language, setLanguage] = useState<Language>('tr');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -423,12 +486,14 @@ function FocusEngineScreen() {
   const scheduledNotificationIdRef = useRef<string | null>(null);
   const drawerWidth = Math.min(326, width * 0.84);
   const colors = COLORS[theme];
+  const t = translations[language];
 
   useEffect(() => {
     const preferences = loadPreferences();
     setSessionMinutes(preferences.sessionMinutes);
     setDurationDraft(String(preferences.sessionMinutes));
     setTheme(preferences.theme);
+    setLanguage(preferences.language ?? 'tr');
     setNotificationsEnabled(preferences.notificationsEnabled);
     setHapticsEnabled(preferences.hapticsEnabled);
     setSoundEnabled(preferences.soundEnabled);
@@ -525,7 +590,11 @@ function FocusEngineScreen() {
 
     const remainingSeconds = Math.max(sessionMinutes * 60 - elapsedRef.current, 1);
     try {
-      const identifier = await scheduleFocusCompletion(remainingSeconds);
+      const identifier = await scheduleFocusCompletion(
+        remainingSeconds,
+        t.notifications.title,
+        t.notifications.body,
+      );
       if (identifier && runningRef.current && enabled) {
         scheduledNotificationIdRef.current = identifier;
         saveTimerState({
@@ -540,7 +609,7 @@ function FocusEngineScreen() {
     } catch {
       // Notifications are optional; the in-app timer remains usable if permission is unavailable.
     }
-  }, [clearScheduledCompletion, notificationsEnabled, sessionMinutes]);
+  }, [clearScheduledCompletion, notificationsEnabled, sessionMinutes, t.notifications.body, t.notifications.title]);
 
   useEffect(() => {
     if (isRunning && notificationsEnabled && !scheduledNotificationIdRef.current) {
@@ -634,6 +703,7 @@ function FocusEngineScreen() {
     savePreferences({
       sessionMinutes,
       theme,
+      language,
       notificationsEnabled,
       hapticsEnabled,
       soundEnabled,
@@ -642,7 +712,7 @@ function FocusEngineScreen() {
       totalFocusMinutes,
       ...next,
     });
-  }, [completedSessions, hapticsEnabled, notificationsEnabled, onboardingCompleted, sessionMinutes, soundEnabled, theme, totalFocusMinutes]);
+  }, [completedSessions, hapticsEnabled, language, notificationsEnabled, onboardingCompleted, sessionMinutes, soundEnabled, theme, totalFocusMinutes]);
 
   const commitDuration = useCallback(() => {
     const parsed = Number.parseInt(durationDraft, 10);
@@ -673,6 +743,16 @@ function FocusEngineScreen() {
     }
     void playTickSound();
   }, [hapticsEnabled, saveCurrentPreferences]);
+
+  const handleToggleLanguage = useCallback(() => {
+    const nextLang: Language = language === 'tr' ? 'en' : 'tr';
+    setLanguage(nextLang);
+    saveCurrentPreferences({ language: nextLang });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, language, saveCurrentPreferences]);
 
   const handleNotificationsToggle = useCallback(async () => {
     if (notificationsEnabled) {
@@ -746,6 +826,7 @@ function FocusEngineScreen() {
 
   const completeOnboarding = useCallback((preferences: FocusPreferences) => {
     savePreferences(preferences);
+    setLanguage(preferences.language ?? 'tr');
     setSessionMinutes(preferences.sessionMinutes);
     setDurationDraft(String(preferences.sessionMinutes));
     setNotificationsEnabled(preferences.notificationsEnabled);
@@ -763,7 +844,7 @@ function FocusEngineScreen() {
   }
 
   if (!onboardingCompleted) {
-    return <OnboardingScreen colors={colors} onComplete={completeOnboarding} />;
+    return <OnboardingScreen colors={colors} initialLanguage={language} onComplete={completeOnboarding} />;
   }
 
   return (
@@ -775,8 +856,8 @@ function FocusEngineScreen() {
           <Pressable
             accessible
             accessibilityRole="button"
-            accessibilityLabel="Menüyü aç"
-            accessibilityHint="Oturum ve geri bildirim ayarlarını açar"
+            accessibilityLabel={t.mainTimer.ariaMenuOpen}
+            accessibilityHint={t.mainTimer.ariaHint}
             hitSlop={10}
             onPress={openDrawer}
             style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
@@ -785,8 +866,10 @@ function FocusEngineScreen() {
             <View style={[styles.menuLine, styles.menuLineShort, { backgroundColor: colors.primary }]} />
           </Pressable>
           <View pointerEvents="none" style={styles.topMeta}>
-            <Text style={[styles.topMetaTitle, { color: colors.primary }]}>Focus</Text>
-            <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>{sessionMinutes} dk</Text>
+            <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
+            <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>
+              {sessionMinutes} {t.common.minuteShort}
+            </Text>
           </View>
         </View>
 
@@ -795,8 +878,8 @@ function FocusEngineScreen() {
             style={[styles.focusSurface, animatedCounterStyle]}
             accessible
             accessibilityRole="button"
-            accessibilityLabel={isRunning ? 'Odaklanma sayacını duraklat' : 'Odaklanma sayacını başlat'}
-            accessibilityHint="Başlatmak veya duraklatmak için dokunun. Aşağı çekerek sıfırlayabilirsiniz."
+            accessibilityLabel={isRunning ? t.mainTimer.ariaPause : t.mainTimer.ariaStart}
+            accessibilityHint={t.mainTimer.ariaHint}
             onAccessibilityTap={toggleTimer}
           >
             <MainFocus3D
@@ -816,16 +899,16 @@ function FocusEngineScreen() {
         </GestureDetector>
 
         <View style={[styles.footer, { bottom: insets.bottom + 26 }]}>
-          <Text style={[styles.hint, { color: colors.muted }]}>Dokunarak başlat / durdur</Text>
+          <Text style={[styles.hint, { color: colors.muted }]}>{t.mainTimer.tapToToggle}</Text>
           {(elapsed > 0 || showCompletion) && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Sayacı sıfırla"
+              accessibilityLabel={t.mainTimer.ariaReset}
               hitSlop={12}
               onPress={resetTimer}
               style={({ pressed }) => [styles.resetButton, pressed && styles.itemPressed]}
             >
-              <Text style={[styles.resetButtonText, { color: colors.accent }]}>[ SIFIRLA ]</Text>
+              <Text style={[styles.resetButtonText, { color: colors.accent }]}>[ {t.mainTimer.resetBadge} ]</Text>
             </Pressable>
           )}
         </View>
@@ -833,16 +916,16 @@ function FocusEngineScreen() {
         {showCompletion && (
           <View style={[styles.completionBanner, { borderBottomColor: colors.hairline }]}>
             <View style={styles.completionCopy}>
-              <Text style={[styles.completionTitle, { color: colors.primary }]}>OTURUM TAMAMLANDI</Text>
-              <Text style={[styles.completionSubtitle, { color: colors.secondary }]}>Hedeflenen odak süresine ulaştın.</Text>
+              <Text style={[styles.completionTitle, { color: colors.primary }]}>{t.mainTimer.sessionCompleted.toUpperCase()}</Text>
+              <Text style={[styles.completionSubtitle, { color: colors.secondary }]}>{t.mainTimer.sessionCompletedDesc}</Text>
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Yeni oturum başlat"
+              accessibilityLabel={t.mainTimer.ariaNewSession}
               onPress={resetTimer}
               style={({ pressed }) => [styles.completionAction, pressed && styles.itemPressed]}
             >
-              <Text style={[styles.completionActionText, { color: colors.accent }]}>YENİ</Text>
+              <Text style={[styles.completionActionText, { color: colors.accent }]}>{t.mainTimer.newSession}</Text>
             </Pressable>
           </View>
         )}
@@ -854,6 +937,7 @@ function FocusEngineScreen() {
           sessionMinutes={sessionMinutes}
           durationDraft={durationDraft}
           theme={theme}
+          language={language}
           hapticsEnabled={hapticsEnabled}
           notificationsEnabled={notificationsEnabled}
           soundEnabled={soundEnabled}
@@ -866,6 +950,7 @@ function FocusEngineScreen() {
           onCommitDuration={commitDuration}
           onSelectPreset={selectPreset}
           onThemeChange={handleThemeChange}
+          onToggleLanguage={handleToggleLanguage}
           onToggleHaptics={handleToggleHaptics}
           onToggleNotifications={() => {
             void handleNotificationsToggle();

@@ -21,7 +21,11 @@ export async function requestNotificationPermission() {
   return (await notificationApi.requestPermission()) === 'granted';
 }
 
-export async function scheduleFocusCompletion(seconds: number) {
+export async function scheduleFocusCompletion(
+  seconds: number,
+  title = 'Odak oturumu tamamlandı',
+  body = 'Kısa bir nefes al. Hazırsan yeni bir oturum başlat.'
+) {
   const notificationApi = getNotificationApi();
   if (!notificationApi || notificationApi.permission !== 'granted' || seconds <= 0) {
     return null;
@@ -29,8 +33,8 @@ export async function scheduleFocusCompletion(seconds: number) {
 
   const identifier = `focus-${Date.now()}`;
   const timer = setTimeout(() => {
-    new notificationApi('Odak oturumu tamamlandı', {
-      body: 'Kısa bir nefes al. Hazırsan yeni bir oturum başlat.',
+    new notificationApi(title, {
+      body,
     });
     timers.delete(identifier);
   }, seconds * 1000);

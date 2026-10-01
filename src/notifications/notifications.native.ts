@@ -34,7 +34,11 @@ export async function requestNotificationPermission(): Promise<boolean> {
   }
 }
 
-export async function scheduleFocusCompletion(seconds: number): Promise<string | null> {
+export async function scheduleFocusCompletion(
+  seconds: number,
+  title = 'Odak Seansı Tamamlandı',
+  body = 'Derin çalışma turunu başarıyla tamamladın. Kısa bir mola verebilirsin.'
+): Promise<string | null> {
   if (seconds <= 0) {
     return null;
   }
@@ -42,8 +46,8 @@ export async function scheduleFocusCompletion(seconds: number): Promise<string |
   try {
     return await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Odak Seansı Tamamlandı',
-        body: 'Derin çalışma turunu başarıyla tamamladın. Kısa bir mola verebilirsin.',
+        title,
+        body,
         sound: 'default',
         priority: Notifications.AndroidNotificationPriority.HIGH,
       },

@@ -1,8 +1,10 @@
 export type ThemeMode = 'dark' | 'light';
+export type Language = 'tr' | 'en';
 
 export type FocusPreferences = {
   sessionMinutes: number;
   theme: ThemeMode;
+  language: Language;
   notificationsEnabled: boolean;
   hapticsEnabled: boolean;
   soundEnabled: boolean;
@@ -15,6 +17,7 @@ const STORAGE_KEY = 'focus-engine.preferences';
 const defaults: FocusPreferences = {
   sessionMinutes: 25,
   theme: 'dark',
+  language: 'tr',
   notificationsEnabled: false,
   hapticsEnabled: true,
   soundEnabled: true,
@@ -49,6 +52,7 @@ export function loadPreferences(): FocusPreferences {
         ? Math.min(720, Math.max(1, Math.round(parsed.sessionMinutes)))
         : defaults.sessionMinutes,
       theme: parsed.theme === 'light' ? 'light' : 'dark',
+      language: parsed.language === 'en' ? 'en' : 'tr',
       notificationsEnabled: parsed.notificationsEnabled === true,
       hapticsEnabled: parsed.hapticsEnabled !== false,
       soundEnabled: parsed.soundEnabled !== false,
