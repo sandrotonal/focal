@@ -49,7 +49,7 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
   body,
   appName = 'FOCUS ENGINE',
   timeText = 'şimdi',
-  actionText = 'YENİ SEANS',
+  actionText = 'Yeni seans',
   dismissText = 'Kapat',
   theme,
   colors,
@@ -85,7 +85,7 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
       if (event.translationY < -24 || event.velocityY < -240) {
         runOnJS(handleDismiss)();
       } else {
-        translateY.value = withSpring(0, { damping: 24, stiffness: 340 });
+        translateY.value = withSpring(0, { damping: 22, stiffness: 320 });
       }
     });
 
@@ -97,23 +97,26 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
     return null;
   }
 
-  // Solid, architectural, zero-glass colors
-  const cardBg = isDark ? colors.panel : '#FFFFFF';
-  const cardBorder = colors.hairline;
-  const primaryText = colors.primary;
-  const secondaryText = colors.secondary;
-  const mutedText = colors.muted;
+  // Exact 1-to-1 match with reference Apple iOS banner design
+  const cardBg = isDark ? 'rgba(50, 54, 62, 0.76)' : 'rgba(240, 242, 246, 0.88)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.09)';
+  const primaryText = isDark ? '#FFFFFF' : '#111113';
+  const secondaryText = isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(30, 30, 35, 0.68)';
+  const headerMetaText = isDark ? 'rgba(255, 255, 255, 0.75)' : 'rgba(30, 30, 35, 0.75)';
+  const bulletText = isDark ? 'rgba(255, 255, 255, 0.40)' : 'rgba(30, 30, 35, 0.40)';
+  const timeMetaText = isDark ? 'rgba(255, 255, 255, 0.52)' : 'rgba(30, 30, 35, 0.52)';
 
-  // Solid high-contrast action button (Swiss/Apple Hardware aesthetic)
-  const buttonBg = isDark ? '#FFFFFF' : '#1D1D1F';
-  const buttonTextColor = isDark ? '#000000' : '#FFFFFF';
-  const closeBtnBg = isDark ? '#1C1C1E' : '#EBEBEF';
-  const iconBadgeBg = isDark ? '#18181A' : '#F2F2F5';
+  const closeBtnBg = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.07)';
+  const closeIconColor = isDark ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.75)';
+
+  const actionBtnBg = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
+  const actionBtnBorder = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.10)';
+  const actionBtnTextColor = isDark ? '#FFFFFF' : '#111113';
 
   return (
     <Animated.View
-      entering={SlideInUp.springify().damping(20).stiffness(260).mass(0.8)}
-      exiting={SlideOutUp.duration(160)}
+      entering={SlideInUp.springify().damping(19).stiffness(240).mass(0.85)}
+      exiting={SlideOutUp.duration(180)}
       style={[
         styles.positionWrapper,
         { top: Math.max(topInset + 10, 16) },
@@ -135,30 +138,25 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
           accessibilityRole="alert"
           accessibilityLabel={`${title}. ${body}`}
         >
-          {/* Header Row: App Identity & Close Button */}
+          {/* Header Row: White App Icon Squircle, App Name, Time, and Circular Close */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <View
-                style={[
-                  styles.appIconBadge,
-                  {
-                    backgroundColor: iconBadgeBg,
-                    borderColor: colors.hairline,
-                  },
-                ]}
-              >
-                <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
-                  <Circle cx={12} cy={12} r={8.5} stroke={colors.accent} strokeWidth={2.4} />
-                  <Circle cx={12} cy={12} r={3} fill={colors.accent} />
+              {/* White App Icon Squircle matching reference */}
+              <View style={styles.appIconContainer}>
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                  <Circle cx={12} cy={12} r={8.5} stroke="#0A84FF" strokeWidth={2.5} />
+                  <Circle cx={12} cy={12} r={3.2} fill="#0A84FF" />
                 </Svg>
               </View>
-              <Text style={[styles.appName, { color: secondaryText }]}>
+
+              <Text style={[styles.appName, { color: headerMetaText }]}>
                 {appName.toUpperCase()}
               </Text>
-              <Text style={[styles.bullet, { color: mutedText }]}>•</Text>
-              <Text style={[styles.timeText, { color: mutedText }]}>{timeText}</Text>
+              <Text style={[styles.bullet, { color: bulletText }]}>•</Text>
+              <Text style={[styles.timeText, { color: timeMetaText }]}>{timeText}</Text>
             </View>
 
+            {/* Circular Close Button */}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={dismissText}
@@ -170,10 +168,10 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
                 pressed && styles.itemPressed,
               ]}
             >
-              <Svg width={9} height={9} viewBox="0 0 12 12" fill="none">
+              <Svg width={10} height={10} viewBox="0 0 12 12" fill="none">
                 <Path
                   d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5"
-                  stroke={secondaryText}
+                  stroke={closeIconColor}
                   strokeWidth={2}
                   strokeLinecap="round"
                 />
@@ -181,7 +179,7 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
             </Pressable>
           </View>
 
-          {/* Content Row: Text & Solid High-Contrast Action Button */}
+          {/* Content & Action Row */}
           <View style={styles.contentRow}>
             <View style={styles.textContent}>
               <Text style={[styles.title, { color: primaryText }]} numberOfLines={1}>
@@ -192,17 +190,21 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
               </Text>
             </View>
 
+            {/* Frosted Action Pill ("Yeni seans") */}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={actionText}
               onPress={handleAction}
               style={({ pressed }) => [
                 styles.actionButton,
-                { backgroundColor: buttonBg },
+                {
+                  backgroundColor: actionBtnBg,
+                  borderColor: actionBtnBorder,
+                },
                 pressed && styles.actionButtonPressed,
               ]}
             >
-              <Text style={[styles.actionButtonText, { color: buttonTextColor }]}>
+              <Text style={[styles.actionButtonText, { color: actionBtnTextColor }]}>
                 {actionText}
               </Text>
             </Pressable>
@@ -216,33 +218,39 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
 const styles = StyleSheet.create({
   positionWrapper: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: 14,
+    right: 14,
     zIndex: 100,
     alignItems: 'center',
   },
   card: {
     width: '100%',
-    maxWidth: 420,
-    borderRadius: 14,
+    maxWidth: 440,
+    borderRadius: 24,
     borderWidth: 1,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 13,
+    paddingBottom: 15,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(30px) saturate(190%)',
+        WebkitBackdropFilter: 'blur(30px) saturate(190%)',
+      } as unknown as Record<string, unknown>,
+    }),
   },
   cardShadowDark: {
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.45,
-        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.35,
+        shadowRadius: 28,
       },
       android: {
-        elevation: 8,
+        elevation: 12,
       },
       web: {
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+        boxShadow: '0 20px 42px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2)',
       },
     }),
   },
@@ -250,15 +258,15 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
       },
       android: {
-        elevation: 4,
+        elevation: 6,
       },
       web: {
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.04)',
       },
     }),
   },
@@ -271,78 +279,86 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
-  appIconBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
+  appIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   appName: {
     fontFamily: 'System',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   bullet: {
-    fontSize: 8,
+    fontSize: 10,
+    marginHorizontal: -2,
   },
   timeText: {
     fontFamily: 'System',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
   },
   closeButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemPressed: {
-    opacity: 0.5,
+    opacity: 0.6,
     transform: [{ scale: 0.94 }],
   },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 14,
+    marginTop: 2,
   },
   textContent: {
     flex: 1,
   },
   title: {
     fontFamily: 'System',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   body: {
-    marginTop: 2,
+    marginTop: 3,
     fontFamily: 'System',
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '400',
   },
   actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionButtonPressed: {
-    opacity: 0.75,
+    opacity: 0.72,
     transform: [{ scale: 0.97 }],
   },
   actionButtonText: {
     fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
 });
