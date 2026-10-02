@@ -33,6 +33,7 @@ import { OnboardingScreen } from './src/components/onboarding';
 import { MainFocus3D } from './src/components/MainFocus3D';
 import { ModernSwitch } from './src/components/ui/ModernSwitch';
 import { ModernResetButton } from './src/components/ui/ModernResetButton';
+import { AppleNotificationBanner } from './src/components/ui/AppleNotificationBanner';
 import {
   playFocusCompleteSound,
   playFocusStartSound,
@@ -46,6 +47,7 @@ import {
   scheduleFocusCompletion,
 } from './src/notifications/notifications';
 import {
+  DurationUnit,
   FocusPreferences,
   Language,
   loadPreferences,
@@ -83,15 +85,18 @@ type AppColors = (typeof COLORS)[ThemeMode];
 const RESET_THRESHOLD = 112;
 const FLICK_THRESHOLD = -56;
 const FLICK_VELOCITY = -650;
-const SESSION_OPTIONS = [25, 50, 90];
-const MENU_ITEMS = ['Odak', 'Süre', 'Tema', 'Bildirim', 'Haptik', 'Ses'];
+const SESSION_OPTIONS_MINUTES = [15, 25, 45, 60];
+const SESSION_OPTIONS_SECONDS = [15, 30, 45, 60];
 
 function formatElapsed(totalSeconds: number) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, '0')).join(':');
+  if (hours > 0) {
+    return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, '0')).join(':');
+  }
+  return [minutes, seconds].map((unit) => String(unit).padStart(2, '0')).join(':');
 }
 
 function rubberBand(value: number, dimension: number, constant = 0.55) {
@@ -104,6 +109,8 @@ type FocusDrawerProps = {
   visible: boolean;
   activeIndex: number;
   sessionMinutes: number;
+  sessionSeconds: number;
+  durationUnit: DurationUnit;
   durationDraft: string;
   theme: ThemeMode;
   language: Language;
@@ -115,9 +122,10 @@ type FocusDrawerProps = {
   colors: AppColors;
   onClose: () => void;
   onSelect: (index: number) => void;
+  onChangeDurationUnit: (unit: DurationUnit) => void;
   onDurationDraftChange: (value: string) => void;
   onCommitDuration: () => void;
-  onSelectPreset: (minutes: number) => void;
+  onSelectPreset: (value: number) => void;
   onThemeChange: (theme: ThemeMode) => void;
   onToggleLanguage: () => void;
   onToggleHaptics: () => void;
@@ -130,6 +138,8 @@ function FocusDrawer({
   visible,
   activeIndex,
   sessionMinutes,
+  sessionSeconds,
+  durationUnit,
   durationDraft,
   theme,
   language,
@@ -139,6 +149,7 @@ function FocusDrawer({
   colors,
   onClose,
   onSelect,
+  onChangeDurationUnit,
   onDurationDraftChange,
   onCommitDuration,
   onSelectPreset,
@@ -242,11 +253,51 @@ function FocusDrawer({
             {activeIndex !== 0 && <View style={[styles.drawerRule, { backgroundColor: colors.hairline }]} />}
             {activeIndex === 1 && (
               <View style={styles.drawerSection}>
+                {/* Unit Selector: Dakika / Saniye */}
+                <View style={[styles.unitSelectorRow, { borderColor: colors.hairline, backgroundColor: colors.background }]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.drawer.sections.unitMinutes}
+                    onPress={() => onChangeDurationUnit('minutes')}
+                    style={[
+                      styles.unitTab,
+                      durationUnit === 'minutes' && { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 1 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.unitTabText,
+                        { color: durationUnit === 'minutes' ? colors.primary : colors.muted },
+                      ]}
+                    >
+                      {t.drawer.sections.unitMinutes.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t.drawer.sections.unitSeconds}
+                    onPress={() => onChangeDurationUnit('seconds')}
+                    style={[
+                      styles.unitTab,
+                      durationUnit === 'seconds' && { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 1 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.unitTabText,
+                        { color: durationUnit === 'seconds' ? colors.primary : colors.muted },
+                      ]}
+                    >
+                      {t.drawer.sections.unitSeconds.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                </View>
+
                 <View style={styles.durationEditor}>
                   <TextInput
                     accessibilityLabel={t.drawer.sections.focusDuration}
                     keyboardType="number-pad"
-                    maxLength={3}
+                    maxLength={4}
                     onBlur={onCommitDuration}
                     onChangeText={onDurationDraftChange}
                     onSubmitEditing={onCommitDuration}
@@ -255,26 +306,33 @@ function FocusDrawer({
                     style={[styles.durationInput, { color: colors.primary, borderBottomColor: colors.hairline }]}
                     value={durationDraft}
                   />
-                  <Text style={[styles.durationUnit, { color: colors.secondary }]}>{t.common.minuteShort}</Text>
+                  <Text style={[styles.durationUnit, { color: colors.secondary }]}>
+                    {durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort}
+                  </Text>
                 </View>
+
                 <View style={styles.presetRow}>
-                  {SESSION_OPTIONS.map((option) => (
-                    <Pressable
-                      key={option}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${option} ${t.common.minuteShort}`}
-                      onPress={() => onSelectPreset(option)}
-                      style={({ pressed }) => [
-                        styles.preset,
-                        { borderBottomColor: option === sessionMinutes ? colors.accent : colors.hairline },
-                        pressed && styles.itemPressed,
-                      ]}
-                    >
-                      <Text style={[styles.presetText, { color: option === sessionMinutes ? colors.primary : colors.secondary }]}>
-                        {option}
-                      </Text>
-                    </Pressable>
-                  ))}
+                  {(durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES).map((option) => {
+                    const isSelected = durationUnit === 'seconds' ? option === sessionSeconds : option === sessionMinutes;
+                    const unitLabel = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
+                    return (
+                      <Pressable
+                        key={option}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${option} ${unitLabel}`}
+                        onPress={() => onSelectPreset(option)}
+                        style={({ pressed }) => [
+                          styles.preset,
+                          { borderBottomColor: isSelected ? colors.accent : colors.hairline },
+                          pressed && styles.itemPressed,
+                        ]}
+                      >
+                        <Text style={[styles.presetText, { color: isSelected ? colors.primary : colors.secondary }]}>
+                          {option}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -469,6 +527,8 @@ function FocusEngineScreen() {
   const [showCompletion, setShowCompletion] = useState(false);
   const [activeMenuIndex, setActiveMenuIndex] = useState(0);
   const [sessionMinutes, setSessionMinutes] = useState(25);
+  const [sessionSeconds, setSessionSeconds] = useState(30);
+  const [durationUnit, setDurationUnit] = useState<DurationUnit>('minutes');
   const [durationDraft, setDurationDraft] = useState('25');
   const [theme, setTheme] = useState<ThemeMode>('dark');
   const [language, setLanguage] = useState<Language>('tr');
@@ -489,10 +549,17 @@ function FocusEngineScreen() {
   const colors = COLORS[theme];
   const t = translations[language];
 
+  const targetDurationSeconds = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes * 60;
+
   useEffect(() => {
     const preferences = loadPreferences();
-    setSessionMinutes(preferences.sessionMinutes);
-    setDurationDraft(String(preferences.sessionMinutes));
+    const prefUnit = preferences.durationUnit ?? 'minutes';
+    const prefSeconds = preferences.sessionSeconds ?? 30;
+    const prefMinutes = preferences.sessionMinutes ?? 25;
+    setDurationUnit(prefUnit);
+    setSessionSeconds(prefSeconds);
+    setSessionMinutes(prefMinutes);
+    setDurationDraft(prefUnit === 'seconds' ? String(prefSeconds) : String(prefMinutes));
     setTheme(preferences.theme);
     setLanguage(preferences.language ?? 'tr');
     setNotificationsEnabled(preferences.notificationsEnabled);
@@ -530,17 +597,17 @@ function FocusEngineScreen() {
 
     const interval = setInterval(() => {
       const nextElapsed = elapsedRef.current + 1;
-      const sessionSeconds = sessionMinutes * 60;
 
-      if (nextElapsed >= sessionSeconds) {
-        elapsedRef.current = sessionSeconds;
+      if (nextElapsed >= targetDurationSeconds) {
+        elapsedRef.current = targetDurationSeconds;
         runningRef.current = false;
-        setElapsed(sessionSeconds);
+        setElapsed(targetDurationSeconds);
         setIsRunning(false);
         setShowCompletion(true);
         const preferences = loadPreferences();
         const nextCompletedSessions = preferences.completedSessions + 1;
-        const nextTotalFocusMinutes = preferences.totalFocusMinutes + sessionMinutes;
+        const minutesToAdd = durationUnit === 'seconds' ? Math.max(1, Math.round(sessionSeconds / 60)) : sessionMinutes;
+        const nextTotalFocusMinutes = preferences.totalFocusMinutes + minutesToAdd;
         setCompletedSessions(nextCompletedSessions);
         setTotalFocusMinutes(nextTotalFocusMinutes);
         savePreferences({
@@ -550,7 +617,7 @@ function FocusEngineScreen() {
         });
         scheduledNotificationIdRef.current = null;
         saveTimerState({
-          elapsed: sessionSeconds,
+          elapsed: targetDurationSeconds,
           isRunning: false,
           startedAt: null,
           scheduledNotificationId: null,
@@ -567,7 +634,7 @@ function FocusEngineScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [hapticsEnabled, isRunning, sessionMinutes]);
+  }, [durationUnit, hapticsEnabled, isRunning, sessionMinutes, sessionSeconds, targetDurationSeconds]);
 
   const triggerImpact = useCallback((style: Haptics.ImpactFeedbackStyle) => {
     if (hapticsEnabled) {
@@ -589,7 +656,7 @@ function FocusEngineScreen() {
       return;
     }
 
-    const remainingSeconds = Math.max(sessionMinutes * 60 - elapsedRef.current, 1);
+    const remainingSeconds = Math.max(targetDurationSeconds - elapsedRef.current, 1);
     try {
       const identifier = await scheduleFocusCompletion(
         remainingSeconds,
@@ -610,7 +677,7 @@ function FocusEngineScreen() {
     } catch {
       // Notifications are optional; the in-app timer remains usable if permission is unavailable.
     }
-  }, [clearScheduledCompletion, notificationsEnabled, sessionMinutes, t.notifications.body, t.notifications.title]);
+  }, [clearScheduledCompletion, notificationsEnabled, t.notifications.body, t.notifications.title, targetDurationSeconds]);
 
   useEffect(() => {
     if (isRunning && notificationsEnabled && !scheduledNotificationIdRef.current) {
@@ -699,10 +766,12 @@ function FocusEngineScreen() {
     transform: [{ translateY: translateY.value }, { scale: runningScale.value }],
   }));
 
-  const progress = Math.min(elapsed / (sessionMinutes * 60), 1);
+  const progress = Math.min(elapsed / targetDurationSeconds, 1);
   const saveCurrentPreferences = useCallback((next: Partial<FocusPreferences>) => {
     savePreferences({
       sessionMinutes,
+      sessionSeconds,
+      durationUnit,
       theme,
       language,
       notificationsEnabled,
@@ -713,28 +782,51 @@ function FocusEngineScreen() {
       totalFocusMinutes,
       ...next,
     });
-  }, [completedSessions, hapticsEnabled, language, notificationsEnabled, onboardingCompleted, sessionMinutes, soundEnabled, theme, totalFocusMinutes]);
+  }, [completedSessions, durationUnit, hapticsEnabled, language, notificationsEnabled, onboardingCompleted, sessionMinutes, sessionSeconds, soundEnabled, theme, totalFocusMinutes]);
 
   const commitDuration = useCallback(() => {
     const parsed = Number.parseInt(durationDraft, 10);
-    const next = Number.isFinite(parsed) ? Math.min(720, Math.max(1, parsed)) : sessionMinutes;
-    setSessionMinutes(next);
-    setDurationDraft(String(next));
-    saveCurrentPreferences({ sessionMinutes: next });
+    if (durationUnit === 'seconds') {
+      const next = Number.isFinite(parsed) ? Math.min(3600, Math.max(5, parsed)) : sessionSeconds;
+      setSessionSeconds(next);
+      setDurationDraft(String(next));
+      saveCurrentPreferences({ sessionSeconds: next });
+    } else {
+      const next = Number.isFinite(parsed) ? Math.min(720, Math.max(1, parsed)) : sessionMinutes;
+      setSessionMinutes(next);
+      setDurationDraft(String(next));
+      saveCurrentPreferences({ sessionMinutes: next });
+    }
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
-  }, [durationDraft, hapticsEnabled, saveCurrentPreferences, sessionMinutes]);
+  }, [durationDraft, durationUnit, hapticsEnabled, saveCurrentPreferences, sessionMinutes, sessionSeconds]);
 
-  const selectPreset = useCallback((minutes: number) => {
-    setSessionMinutes(minutes);
-    setDurationDraft(String(minutes));
-    saveCurrentPreferences({ sessionMinutes: minutes });
+  const selectPreset = useCallback((value: number) => {
+    if (durationUnit === 'seconds') {
+      setSessionSeconds(value);
+      setDurationDraft(String(value));
+      saveCurrentPreferences({ sessionSeconds: value });
+    } else {
+      setSessionMinutes(value);
+      setDurationDraft(String(value));
+      saveCurrentPreferences({ sessionMinutes: value });
+    }
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
     void playTickSound();
-  }, [hapticsEnabled, saveCurrentPreferences]);
+  }, [durationUnit, hapticsEnabled, saveCurrentPreferences]);
+
+  const handleChangeDurationUnit = useCallback((unit: DurationUnit) => {
+    setDurationUnit(unit);
+    setDurationDraft(unit === 'seconds' ? String(sessionSeconds) : String(sessionMinutes));
+    saveCurrentPreferences({ durationUnit: unit });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, saveCurrentPreferences, sessionMinutes, sessionSeconds]);
 
   const handleThemeChange = useCallback((nextTheme: ThemeMode) => {
     setTheme(nextTheme);
@@ -829,7 +921,9 @@ function FocusEngineScreen() {
     savePreferences(preferences);
     setLanguage(preferences.language ?? 'tr');
     setSessionMinutes(preferences.sessionMinutes);
-    setDurationDraft(String(preferences.sessionMinutes));
+    setSessionSeconds(preferences.sessionSeconds ?? 30);
+    setDurationUnit(preferences.durationUnit ?? 'minutes');
+    setDurationDraft(preferences.durationUnit === 'seconds' ? String(preferences.sessionSeconds ?? 30) : String(preferences.sessionMinutes));
     setNotificationsEnabled(preferences.notificationsEnabled);
     setHapticsEnabled(preferences.hapticsEnabled);
     setSoundEnabled(preferences.soundEnabled);
@@ -853,7 +947,16 @@ function FocusEngineScreen() {
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <StatusBar hidden style={theme === 'dark' ? 'light' : 'dark'} />
 
-        <View style={[styles.topBar, { top: insets.top + 8 }]}>
+        <View
+          style={[
+            styles.topBar,
+            {
+              top: insets.top + 8,
+              opacity: showCompletion ? 0 : 1,
+            },
+          ]}
+          pointerEvents={showCompletion ? 'none' : 'auto'}
+        >
           <Pressable
             accessible
             accessibilityRole="button"
@@ -869,7 +972,7 @@ function FocusEngineScreen() {
           <View pointerEvents="none" style={styles.topMeta}>
             <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
             <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>
-              {sessionMinutes} {t.common.minuteShort}
+              {durationUnit === 'seconds' ? `${sessionSeconds} ${t.common.secondShort}` : `${sessionMinutes} ${t.common.minuteShort}`}
             </Text>
           </View>
         </View>
@@ -912,28 +1015,29 @@ function FocusEngineScreen() {
           )}
         </View>
 
-        {showCompletion && (
-          <View style={[styles.completionBanner, { borderBottomColor: colors.hairline }]}>
-            <View style={styles.completionCopy}>
-              <Text style={[styles.completionTitle, { color: colors.primary }]}>{t.mainTimer.sessionCompleted.toUpperCase()}</Text>
-              <Text style={[styles.completionSubtitle, { color: colors.secondary }]}>{t.mainTimer.sessionCompletedDesc}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.mainTimer.ariaNewSession}
-              onPress={resetTimer}
-              style={({ pressed }) => [styles.completionAction, pressed && styles.itemPressed]}
-            >
-              <Text style={[styles.completionActionText, { color: colors.accent }]}>{t.mainTimer.newSession}</Text>
-            </Pressable>
-          </View>
-        )}
+        <AppleNotificationBanner
+          visible={showCompletion}
+          title={t.mainTimer.sessionCompleted}
+          body={t.mainTimer.sessionCompletedDesc}
+          appName={t.common.appName || 'FOCUS'}
+          timeText={t.mainTimer.now}
+          actionText={t.mainTimer.newSession}
+          dismissText={t.mainTimer.dismiss}
+          theme={theme}
+          colors={colors}
+          topInset={insets.top}
+          hapticsEnabled={hapticsEnabled}
+          onAction={resetTimer}
+          onDismiss={() => setShowCompletion(false)}
+        />
 
         <FocusDrawer
           drawerWidth={drawerWidth}
           visible={isDrawerOpen}
           activeIndex={activeMenuIndex}
           sessionMinutes={sessionMinutes}
+          sessionSeconds={sessionSeconds}
+          durationUnit={durationUnit}
           durationDraft={durationDraft}
           theme={theme}
           language={language}
@@ -945,6 +1049,7 @@ function FocusEngineScreen() {
           colors={colors}
           onClose={closeDrawer}
           onSelect={handleMenuSelect}
+          onChangeDurationUnit={handleChangeDurationUnit}
           onDurationDraftChange={(value) => setDurationDraft(value.replace(/[^0-9]/g, ''))}
           onCommitDuration={commitDuration}
           onSelectPreset={selectPreset}
@@ -1392,55 +1497,6 @@ const styles = StyleSheet.create({
   modernResetWrapper: {
     marginTop: 14,
   },
-  completionBanner: {
-    position: 'absolute',
-    left: 24,
-    right: 24,
-    bottom: 96,
-    minHeight: 56,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-  },
-  completionMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completionMarkText: {
-    fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  completionCopy: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  completionTitle: {
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  completionSubtitle: {
-    marginTop: 3,
-    fontFamily: 'System',
-    fontSize: 12,
-    fontWeight: '400',
-  },
-  completionAction: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completionActionText: {
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   scrim: {
     zIndex: 4,
     backgroundColor: '#000000',
@@ -1573,6 +1629,27 @@ const styles = StyleSheet.create({
   },
   itemPressed: {
     opacity: 0.55,
+  },
+  unitSelectorRow: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 3,
+    marginBottom: 8,
+    gap: 4,
+  },
+  unitTab: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unitTabText: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   durationEditor: {
     marginTop: 20,

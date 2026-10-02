@@ -82,6 +82,8 @@ export const OnboardingScreen: React.FC<Props> = ({
     }
     onComplete({
       sessionMinutes,
+      sessionSeconds: 30,
+      durationUnit: 'minutes',
       theme: 'dark',
       language,
       notificationsEnabled,

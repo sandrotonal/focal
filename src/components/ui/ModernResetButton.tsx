@@ -8,13 +8,16 @@ import {
   ViewStyle,
 } from 'react-native';
 import Animated, {
+  Easing,
   FadeIn,
   FadeOut,
   interpolate,
   interpolateColor,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -41,17 +44,20 @@ export const ModernResetButton: React.FC<ModernResetButtonProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
-  const active = isHovered || isPressed;
+  const active = (isHovered || isPressed) && !isClosing;
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withSpring(active ? 1 : 0, {
-      damping: 17,
-      stiffness: 260,
-      mass: 0.75,
-    });
-  }, [active, progress]);
+    if (!isClosing) {
+      progress.value = withSpring(active ? 1 : 0, {
+        damping: 17,
+        stiffness: 260,
+        mass: 0.75,
+      });
+    }
+  }, [active, isClosing, progress]);
 
   const idleBg = theme === 'dark' ? '#141414' : '#222224';
   const activeBg = 'rgb(255, 69, 69)';
@@ -78,9 +84,10 @@ export const ModernResetButton: React.FC<ModernResetButtonProps> = ({
   const animatedIconStyle = useAnimatedStyle(() => {
     const translateY = interpolate(progress.value, [0, 1], [0, 10]);
     const scale = interpolate(progress.value, [0, 1], [1, 1.05]);
+    const rotate = `${interpolate(progress.value, [0, 1], [0, 360])}deg`;
 
     return {
-      transform: [{ translateY }, { scale }],
+      transform: [{ translateY }, { scale }, { rotate }],
     };
   });
 
@@ -116,19 +123,60 @@ export const ModernResetButton: React.FC<ModernResetButtonProps> = ({
     }
   }, []);
 
+  const handlePress = useCallback(() => {
+    if (disabled || isClosing) {
+      return;
+    }
+    setIsClosing(true);
+
+    if (progress.value > 0.35) {
+      // Already expanded: smoothly collapse back to 50px circle
+      progress.value = withTiming(
+        0,
+        { duration: 280, easing: Easing.bezier(0.25, 0.1, 0.25, 1) },
+        (finished) => {
+          if (finished) {
+            runOnJS(onPress)();
+            runOnJS(setIsClosing)(false);
+          }
+        }
+      );
+    } else {
+      // Tap without hover: briefly expand and then smoothly collapse
+      progress.value = withTiming(
+        1,
+        { duration: 160, easing: Easing.out(Easing.quad) },
+        (expanded) => {
+          if (expanded) {
+            progress.value = withTiming(
+              0,
+              { duration: 280, easing: Easing.bezier(0.25, 0.1, 0.25, 1) },
+              (finished) => {
+                if (finished) {
+                  runOnJS(onPress)();
+                  runOnJS(setIsClosing)(false);
+                }
+              }
+            );
+          }
+        }
+      );
+    }
+  }, [disabled, isClosing, onPress, progress]);
+
   return (
     <Animated.View
       entering={FadeIn.duration(200)}
-      exiting={FadeOut.duration(150)}
+      exiting={FadeOut.duration(220)}
       style={[styles.container, style]}
     >
       <Pressable
         accessible
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        disabled={disabled}
+        disabled={disabled || isClosing}
         hitSlop={8}
-        onPress={onPress}
+        onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onHoverIn={handleHoverIn}
