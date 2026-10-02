@@ -32,6 +32,7 @@ import { LineSidebar } from './src/components/LineSidebar';
 import { OnboardingScreen } from './src/components/onboarding';
 import { MainFocus3D } from './src/components/MainFocus3D';
 import { ModernSwitch } from './src/components/ui/ModernSwitch';
+import { ModernResetButton } from './src/components/ui/ModernResetButton';
 import {
   playFocusCompleteSound,
   playFocusStartSound,
@@ -901,15 +902,13 @@ function FocusEngineScreen() {
         <View style={[styles.footer, { bottom: insets.bottom + 26 }]}>
           <Text style={[styles.hint, { color: colors.muted }]}>{t.mainTimer.tapToToggle}</Text>
           {(elapsed > 0 || showCompletion) && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.mainTimer.ariaReset}
-              hitSlop={12}
+            <ModernResetButton
               onPress={resetTimer}
-              style={({ pressed }) => [styles.resetButton, pressed && styles.itemPressed]}
-            >
-              <Text style={[styles.resetButtonText, { color: colors.accent }]}>[ {t.mainTimer.resetBadge} ]</Text>
-            </Pressable>
+              label={t.mainTimer.resetBadge}
+              accessibilityLabel={t.mainTimer.ariaReset}
+              theme={theme}
+              style={styles.modernResetWrapper}
+            />
           )}
         </View>
 
@@ -1379,6 +1378,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
+    left: 0,
+    right: 0,
     alignItems: 'center',
   },
   hint: {
@@ -1388,18 +1389,8 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: 0.1,
   },
-  resetButton: {
+  modernResetWrapper: {
     marginTop: 14,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resetButtonText: {
-    fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.5,
   },
   completionBanner: {
     position: 'absolute',
