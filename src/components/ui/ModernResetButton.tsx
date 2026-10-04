@@ -59,7 +59,7 @@ export const ModernResetButton: React.FC<ModernResetButtonProps> = React.memo(({
     }
   }, [active, isClosing, progress]);
 
-  const idleBg = theme === 'dark' ? '#141414' : '#222224';
+  const idleBg = theme === 'dark' ? '#181A1F' : '#222224';
   const activeBg = 'rgb(255, 69, 69)';
 
   const animatedButtonStyle = useAnimatedStyle(() => {

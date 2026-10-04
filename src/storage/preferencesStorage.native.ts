@@ -18,7 +18,8 @@ export type FocusPreferences = {
   totalFocusMinutes: number;
 };
 
-const STORAGE_KEY = 'focus-engine.preferences';
+const STORAGE_KEY = 'focal.preferences';
+const LEGACY_STORAGE_KEY = 'focus-engine.preferences';
 const defaults: FocusPreferences = {
   sessionMinutes: 25,
   sessionSeconds: 30,
@@ -36,13 +37,13 @@ const defaults: FocusPreferences = {
 let storage: ReturnType<typeof createMMKV> | null = null;
 
 try {
-  storage = createMMKV({ id: 'focus-engine' });
+  storage = createMMKV({ id: 'focal' });
 } catch {
   // Expo Go does not load custom native modules. A development build uses MMKV.
 }
 
 export function loadPreferences(): FocusPreferences {
-  const serialized = storage?.getString(STORAGE_KEY);
+  const serialized = storage?.getString(STORAGE_KEY) ?? storage?.getString(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
     return defaults;

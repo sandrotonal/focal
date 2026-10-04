@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -59,12 +60,12 @@ import { translations } from './src/i18n/translations';
 
 const COLORS = {
   dark: {
-    background: '#000000',
-    panel: '#0B0B0D',
+    background: '#111215',
+    panel: '#17181C',
     primary: '#F5F5F7',
     secondary: '#B5B6BF',
     muted: '#747681',
-    hairline: '#2A2C33',
+    hairline: '#25272D',
     accent: '#0A84FF',
     scrim: 'rgba(0, 0, 0, 0.68)',
   },
@@ -218,7 +219,16 @@ const FocusDrawer = React.memo(function FocusDrawer({
       >
           <View style={[styles.drawerContent, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}>
             <View style={styles.drawerHeader}>
-              <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
+              <View style={styles.drawerBrand}>
+                <Image
+                  source={require('./assets/focal-logo.png')}
+                  style={styles.drawerLogo}
+                  resizeMode="contain"
+                  accessible
+                  accessibilityLabel="Focal Logo"
+                />
+                <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
+              </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t.mainTimer.ariaMenuClose}
@@ -987,7 +997,16 @@ function FocusEngineScreen() {
             <View style={[styles.menuLine, styles.menuLineShort, { backgroundColor: colors.primary }]} />
           </Pressable>
           <View pointerEvents="none" style={styles.topMeta}>
-            <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
+            <View style={styles.topMetaBrandRow}>
+              <Image
+                source={require('./assets/focal-logo.png')}
+                style={styles.topMetaLogo}
+                resizeMode="contain"
+                accessible
+                accessibilityLabel="Focal Logo"
+              />
+              <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
+            </View>
             <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>
               {durationUnit === 'seconds' ? `${sessionSeconds} ${t.common.secondShort}` : `${sessionMinutes} ${t.common.minuteShort}`}
             </Text>
@@ -1036,7 +1055,7 @@ function FocusEngineScreen() {
           visible={showCompletion}
           title={t.mainTimer.sessionCompleted}
           body={t.mainTimer.sessionCompletedDesc}
-          appName={t.common.appName || 'FOCUS'}
+          appName={t.common.appName || 'FOCAL'}
           timeText={t.mainTimer.now}
           actionText={t.mainTimer.newSession}
           dismissText={t.mainTimer.dismiss}
@@ -1371,7 +1390,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#111215',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1417,6 +1436,15 @@ const styles = StyleSheet.create({
   },
   topMeta: {
     marginLeft: 16,
+  },
+  topMetaBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  topMetaLogo: {
+    width: 15,
+    height: 15,
   },
   topMetaTitle: {
     fontFamily: 'System',
@@ -1471,7 +1499,7 @@ const styles = StyleSheet.create({
     height: 2,
     marginTop: 20,
     alignSelf: 'center',
-    backgroundColor: '#2A2C33',
+    backgroundColor: '#25272D',
   },
   progressFill: {
     height: 2,
@@ -1522,7 +1550,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 5,
-    backgroundColor: '#0B0B0D',
+    backgroundColor: '#17181C',
   },
   drawerContent: {
     flex: 1,
@@ -1530,9 +1558,18 @@ const styles = StyleSheet.create({
   },
   drawerHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 40,
+  },
+  drawerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  drawerLogo: {
+    width: 32,
+    height: 32,
   },
   drawerKicker: {
     color: '#B5B6BF',
@@ -1542,7 +1579,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   drawerTitle: {
-    marginTop: 6,
     color: '#F5F5F7',
     fontFamily: 'System',
     fontSize: 28,
@@ -1571,7 +1607,7 @@ const styles = StyleSheet.create({
   drawerRule: {
     height: 1,
     marginTop: 28,
-    backgroundColor: '#2A2C33',
+    backgroundColor: '#25272D',
   },
   drawerSection: {
     marginTop: 28,
@@ -1614,7 +1650,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2C33',
+    borderBottomColor: '#25272D',
     paddingBottom: 14,
   },
   settingTextGroup: {
@@ -1729,7 +1765,7 @@ const styles = StyleSheet.create({
   drawerOnboardingBtn: {
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#2A2C33',
+    borderTopColor: '#25272D',
   },
   drawerOnboardingBtnText: {
     fontFamily: 'System',

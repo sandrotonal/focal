@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -152,6 +153,13 @@ export const OnboardingScreen: React.FC<Props> = React.memo(({
       {/* Minimal Top Header */}
       <View style={[styles.header, { top: insets.top + 12 }]}>
         <View style={styles.brandRow}>
+          <Image
+            source={require('../../../assets/focal-logo.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
+            accessible
+            accessibilityLabel="Focal Logo"
+          />
           <Text style={[styles.brandTitle, { color: colors.primary }]}>{t.common.appName}</Text>
         </View>
 
@@ -350,6 +358,11 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  brandLogo: {
+    width: 20,
+    height: 20,
   },
   brandTitle: {
     fontFamily: 'System',

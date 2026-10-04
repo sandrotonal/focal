@@ -4,8 +4,7 @@
 - **Tasarım Dili:** Dieter Rams ilkeleri, İsviçre tipografisi ve Apple Pro donanım estetiği (monokrom kontrast, keskin oranlar, rafine mikro-etkileşimler).
 - **Yüzey ve Malzemeler:**
   - Kullanıcı açıkça talep etmedikçe rastgele cam (glassmorphism), neon parlamalar veya şişkin jelibon efektlerinden kaçın.
-  - Katı (solid), net, yüksek kontrastlı yüzeyleri ve 1px hassas hairline kenarlıkları tercih et.
-  - Karanlık modda derin OLED kontrastı (`#000000` / `#0B0B0D`), aydınlık modda saf beyaz ve titanyum grisi (`#FFFFFF` / `#F5F5F7`).
+  - Karanlık modda derin obsidyen taban (`#111215`) ve Apple standardı yüzey basamakları (`#17181C` panel, `#1D1F24` sistem yüzeyi, 1px `rgba(255, 255, 255, 0.08-0.10)` rim highlight). Katı saf siyah (`#000000`) üzerine gölgesiz çiğ gri kutular yerleştirilmez. Aydınlık modda saf beyaz ve titanyum grisi (`#FFFFFF` / `#F5F5F7`).
 
 ## 2. Animasyon ve Hareket (Reanimated & Physics)
 - **Kapanma ve Çıkış Animasyonları:**
