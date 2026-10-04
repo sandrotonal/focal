@@ -35,7 +35,7 @@ type Props = {
   onComplete: (preferences: FocusPreferences) => void;
 };
 
-export const OnboardingScreen: React.FC<Props> = ({
+export const OnboardingScreen: React.FC<Props> = React.memo(({
   colors,
   initialLanguage = 'tr',
   onComplete,
@@ -82,6 +82,8 @@ export const OnboardingScreen: React.FC<Props> = ({
     }
     onComplete({
       sessionMinutes,
+      sessionSeconds: 30,
+      durationUnit: 'minutes',
       theme: 'dark',
       language,
       notificationsEnabled,
@@ -94,20 +96,21 @@ export const OnboardingScreen: React.FC<Props> = ({
   }, [hapticsEnabled, language, notificationsEnabled, onComplete, sessionMinutes, soundEnabled, triggerHaptic]);
 
   const handleStepChange = useCallback((newStep: number) => {
-    setStep(newStep);
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
-    if (soundEnabled) {
-      void playTickSound();
-    }
+    setStep((prev) => {
+      if (prev === newStep) return prev;
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
+      if (soundEnabled) {
+        void playTickSound();
+      }
+      return newStep;
+    });
   }, [soundEnabled, triggerHaptic]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollX.value = event.contentOffset.x;
       const current = Math.round(event.contentOffset.x / width);
-      if (current !== step) {
-        runOnJS(handleStepChange)(current);
-      }
+      runOnJS(handleStepChange)(current);
     },
   });
 
@@ -300,7 +303,7 @@ export const OnboardingScreen: React.FC<Props> = ({
       </View>
     </View>
   );
-};
+});
 
 // Minimalist Segment Indicator
 const ProgressPill: React.FC<{
@@ -308,7 +311,7 @@ const ProgressPill: React.FC<{
   scrollX: SharedValue<number>;
   width: number;
   colors: AppColors;
-}> = ({ index, scrollX, width, colors }) => {
+}> = React.memo(({ index, scrollX, width, colors }) => {
   const pillStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
     const opacity = interpolate(scrollX.value, inputRange, [0.2, 1, 0.2], 'clamp');
@@ -329,7 +332,7 @@ const ProgressPill: React.FC<{
       ]}
     />
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

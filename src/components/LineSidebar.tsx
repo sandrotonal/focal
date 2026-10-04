@@ -1,10 +1,10 @@
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useEffect } from 'react';
 
 type LineSidebarProps = {
   items: string[];
@@ -20,14 +20,19 @@ type LineSidebarProps = {
 
 const ITEM_HEIGHT = 48;
 
-export function LineSidebar({ items, activeIndex, onSelect, colors }: LineSidebarProps) {
+export const LineSidebar: React.FC<LineSidebarProps> = React.memo(({
+  items,
+  activeIndex,
+  onSelect,
+  colors,
+}) => {
   const activePosition = useSharedValue(activeIndex);
 
   useEffect(() => {
     activePosition.value = withSpring(activeIndex, {
-      damping: 18,
-      stiffness: 220,
-      mass: 0.7,
+      damping: 20,
+      stiffness: 240,
+      mass: 0.65,
     });
   }, [activeIndex, activePosition]);
 
@@ -66,7 +71,7 @@ export function LineSidebar({ items, activeIndex, onSelect, colors }: LineSideba
       })}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

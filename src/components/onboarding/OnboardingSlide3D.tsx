@@ -14,7 +14,7 @@ type Props = {
   reducedMotion: boolean;
 };
 
-export const OnboardingSlide3D: React.FC<Props> = ({
+export const OnboardingSlide3D: React.FC<Props> = React.memo(({
   index,
   width,
   scrollX,
@@ -51,7 +51,7 @@ export const OnboardingSlide3D: React.FC<Props> = ({
       <View style={styles.contentWrapper}>{children}</View>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   slide: {

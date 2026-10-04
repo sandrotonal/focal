@@ -4,6 +4,9 @@ export interface TranslationSchema {
   common: {
     appName: string;
     minuteShort: string;
+    secondShort: string;
+    minutes: string;
+    seconds: string;
     continue: string;
     start: string;
     skip: string;
@@ -28,6 +31,8 @@ export interface TranslationSchema {
       focusSubtitle: string;
       customDuration: string;
       customPlaceholder: string;
+      unitMinutes: string;
+      unitSeconds: string;
       save: string;
       darkMode: string;
       lightMode: string;
@@ -64,6 +69,8 @@ export interface TranslationSchema {
     completedSessions: (count: number) => string;
     resetBadge: string;
     newSession: string;
+    now: string;
+    dismiss: string;
     ariaStart: string;
     ariaPause: string;
     ariaMenuOpen: string;
@@ -111,6 +118,9 @@ export const translations: Record<Language, TranslationSchema> = {
     common: {
       appName: 'FOCUS ENGINE',
       minuteShort: 'dk',
+      secondShort: 'sn',
+      minutes: 'Dakika',
+      seconds: 'Saniye',
       continue: 'DEVAM ET',
       start: 'ODAKLANMAYA BAŞLA',
       skip: 'ATLA',
@@ -135,6 +145,8 @@ export const translations: Record<Language, TranslationSchema> = {
         focusSubtitle: 'Seçilen blok uzunluğu',
         customDuration: 'Özel Süre Belirle',
         customPlaceholder: 'Örn: 25',
+        unitMinutes: 'Dakika',
+        unitSeconds: 'Saniye',
         save: 'KAYDET',
         darkMode: 'Karanlık Mod',
         lightMode: 'Aydınlık Mod',
@@ -170,7 +182,9 @@ export const translations: Record<Language, TranslationSchema> = {
       sessionCompletedDesc: 'Hedeflenen odak süresine ulaştın.',
       completedSessions: (count: number) => `Tamamlanan: ${count} seans`,
       resetBadge: 'SIFIRLA',
-      newSession: 'YENİ',
+      newSession: 'Yeni Seans',
+      now: 'şimdi',
+      dismiss: 'Kapat',
       ariaStart: 'Odaklanma sayacını başlat',
       ariaPause: 'Odaklanma sayacını duraklat',
       ariaMenuOpen: 'Menüyü aç',
@@ -209,13 +223,16 @@ export const translations: Record<Language, TranslationSchema> = {
     },
     notifications: {
       title: 'Odak Seansı Tamamlandı',
-      body: 'Tebrikler! Seansını başarıyla tamamladın.',
+      body: 'Hedeflenen odak süresine ulaştın. Zihnini dinlendirmek için kısa bir mola verebilirsin.',
     },
   },
   en: {
     common: {
       appName: 'FOCUS ENGINE',
       minuteShort: 'min',
+      secondShort: 'sec',
+      minutes: 'Minutes',
+      seconds: 'Seconds',
       continue: 'CONTINUE',
       start: 'START FOCUS',
       skip: 'SKIP',
@@ -240,6 +257,8 @@ export const translations: Record<Language, TranslationSchema> = {
         focusSubtitle: 'Selected block duration',
         customDuration: 'Set Custom Duration',
         customPlaceholder: 'e.g. 25',
+        unitMinutes: 'Minutes',
+        unitSeconds: 'Seconds',
         save: 'SAVE',
         darkMode: 'Dark Mode',
         lightMode: 'Light Mode',
@@ -275,7 +294,9 @@ export const translations: Record<Language, TranslationSchema> = {
       sessionCompletedDesc: 'Target focus duration reached.',
       completedSessions: (count: number) => `Completed: ${count} sessions`,
       resetBadge: 'RESET',
-      newSession: 'NEW',
+      newSession: 'New Session',
+      now: 'now',
+      dismiss: 'Dismiss',
       ariaStart: 'Start focus timer',
       ariaPause: 'Pause focus timer',
       ariaMenuOpen: 'Open menu',
@@ -314,7 +335,7 @@ export const translations: Record<Language, TranslationSchema> = {
     },
     notifications: {
       title: 'Focus Session Completed',
-      body: 'Well done! You have successfully completed your session.',
+      body: 'Target focus duration reached. Take a short mindful break to recharge.',
     },
   },
 };

@@ -1,8 +1,11 @@
 export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
+export type DurationUnit = 'minutes' | 'seconds';
 
 export type FocusPreferences = {
   sessionMinutes: number;
+  sessionSeconds: number;
+  durationUnit: DurationUnit;
   theme: ThemeMode;
   language: Language;
   notificationsEnabled: boolean;
@@ -16,6 +19,8 @@ export type FocusPreferences = {
 const STORAGE_KEY = 'focus-engine.preferences';
 const defaults: FocusPreferences = {
   sessionMinutes: 25,
+  sessionSeconds: 30,
+  durationUnit: 'minutes',
   theme: 'dark',
   language: 'tr',
   notificationsEnabled: false,
@@ -51,6 +56,10 @@ export function loadPreferences(): FocusPreferences {
       sessionMinutes: typeof parsed.sessionMinutes === 'number'
         ? Math.min(720, Math.max(1, Math.round(parsed.sessionMinutes)))
         : defaults.sessionMinutes,
+      sessionSeconds: typeof parsed.sessionSeconds === 'number'
+        ? Math.min(3600, Math.max(5, Math.round(parsed.sessionSeconds)))
+        : defaults.sessionSeconds,
+      durationUnit: parsed.durationUnit === 'seconds' ? 'seconds' : 'minutes',
       theme: parsed.theme === 'light' ? 'light' : 'dark',
       language: parsed.language === 'en' ? 'en' : 'tr',
       notificationsEnabled: parsed.notificationsEnabled === true,

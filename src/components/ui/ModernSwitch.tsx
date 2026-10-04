@@ -28,7 +28,7 @@ const TRAVEL_DISTANCE = SWITCH_WIDTH - CIRCLE_DIAMETER - OFFSET * 2; // 22px
 const EFFECT_WIDTH = CIRCLE_DIAMETER / 2; // 9px
 const EFFECT_HEIGHT = EFFECT_WIDTH / 2 - 1; // 3.5px
 
-export const ModernSwitch: React.FC<ModernSwitchProps> = ({
+export const ModernSwitch: React.FC<ModernSwitchProps> = React.memo(({
   value,
   onValueChange,
   checkedBg = '#00DA50',
@@ -59,14 +59,7 @@ export const ModernSwitch: React.FC<ModernSwitchProps> = ({
     };
   });
 
-  const circleStyle = useAnimatedStyle(() => {
-    const translateX = interpolate(progress.value, [0, 1], [0, TRAVEL_DISTANCE]);
-    return {
-      transform: [{ translateX }],
-    };
-  });
-
-  const effectLineStyle = useAnimatedStyle(() => {
+  const thumbTranslateStyle = useAnimatedStyle(() => {
     const translateX = interpolate(progress.value, [0, 1], [0, TRAVEL_DISTANCE]);
     return {
       transform: [{ translateX }],
@@ -104,10 +97,10 @@ export const ModernSwitch: React.FC<ModernSwitchProps> = ({
     >
       <Animated.View style={[styles.slider, trackStyle]}>
         {/* Subtle effect pill line */}
-        <Animated.View style={[styles.effectLine, effectLineStyle]} />
+        <Animated.View style={[styles.effectLine, thumbTranslateStyle]} />
 
         {/* Moving circle thumb */}
-        <Animated.View style={[styles.circle, circleStyle]}>
+        <Animated.View style={[styles.circle, thumbTranslateStyle]}>
           {/* OFF state: Cross SVG */}
           <Animated.View style={[styles.iconContainer, crossStyle]}>
             <Svg height={7} width={7} viewBox="0 0 365.696 365.696">
@@ -131,7 +124,7 @@ export const ModernSwitch: React.FC<ModernSwitchProps> = ({
       </Animated.View>
     </Pressable>
   );
-};
+});
 
 const styles = StyleSheet.create({
   touchArea: {
