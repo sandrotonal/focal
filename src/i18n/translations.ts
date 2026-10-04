@@ -130,7 +130,7 @@ export const translations: Record<Language, TranslationSchema> = {
       silent: 'SESSİZ',
     },
     drawer: {
-      title: 'KONTROL',
+      title: 'FOCAL',
       menu: {
         focus: 'Odak',
         duration: 'Süre',
@@ -242,7 +242,7 @@ export const translations: Record<Language, TranslationSchema> = {
       silent: 'SILENT',
     },
     drawer: {
-      title: 'CONTROLS',
+      title: 'FOCAL',
       menu: {
         focus: 'Focus',
         duration: 'Duration',
