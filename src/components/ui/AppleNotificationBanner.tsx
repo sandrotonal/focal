@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import {
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -177,10 +178,13 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
                   },
                 ]}
               >
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Circle cx={12} cy={12} r={8.5} stroke={tokens.iconGlyph} strokeWidth={2.4} />
-                  <Circle cx={12} cy={12} r={3.2} fill={tokens.iconGlyph} />
-                </Svg>
+                <Image
+                  source={require('../../../assets/focal-logo.png')}
+                  style={styles.appIconImage}
+                  resizeMode="contain"
+                  accessible
+                  accessibilityLabel="Focal Logo"
+                />
               </View>
 
               <Text style={[styles.appName, { color: tokens.headerMeta }]}>
@@ -329,6 +333,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
@@ -343,6 +348,10 @@ const styles = StyleSheet.create({
         boxShadow: '0 1px 4px rgba(0, 0, 0, 0.12)',
       },
     }),
+  },
+  appIconImage: {
+    width: 22,
+    height: 22,
   },
   appName: {
     fontFamily: SYSTEM_FONT,

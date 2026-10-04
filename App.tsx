@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -218,7 +219,16 @@ const FocusDrawer = React.memo(function FocusDrawer({
       >
           <View style={[styles.drawerContent, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}>
             <View style={styles.drawerHeader}>
-              <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
+              <View style={styles.drawerBrand}>
+                <Image
+                  source={require('./assets/focal-logo.png')}
+                  style={styles.drawerLogo}
+                  resizeMode="contain"
+                  accessible
+                  accessibilityLabel="Focal Logo"
+                />
+                <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
+              </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t.mainTimer.ariaMenuClose}
@@ -987,7 +997,16 @@ function FocusEngineScreen() {
             <View style={[styles.menuLine, styles.menuLineShort, { backgroundColor: colors.primary }]} />
           </Pressable>
           <View pointerEvents="none" style={styles.topMeta}>
-            <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
+            <View style={styles.topMetaBrandRow}>
+              <Image
+                source={require('./assets/focal-logo.png')}
+                style={styles.topMetaLogo}
+                resizeMode="contain"
+                accessible
+                accessibilityLabel="Focal Logo"
+              />
+              <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
+            </View>
             <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>
               {durationUnit === 'seconds' ? `${sessionSeconds} ${t.common.secondShort}` : `${sessionMinutes} ${t.common.minuteShort}`}
             </Text>
@@ -1418,6 +1437,15 @@ const styles = StyleSheet.create({
   topMeta: {
     marginLeft: 16,
   },
+  topMetaBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  topMetaLogo: {
+    width: 15,
+    height: 15,
+  },
   topMetaTitle: {
     fontFamily: 'System',
     fontSize: 15,
@@ -1530,9 +1558,18 @@ const styles = StyleSheet.create({
   },
   drawerHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 40,
+  },
+  drawerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  drawerLogo: {
+    width: 32,
+    height: 32,
   },
   drawerKicker: {
     color: '#B5B6BF',
@@ -1542,7 +1579,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   drawerTitle: {
-    marginTop: 6,
     color: '#F5F5F7',
     fontFamily: 'System',
     fontSize: 28,

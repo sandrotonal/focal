@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/focal-logo.png" width="108" alt="Focal Logo" />
+</p>
+
 # FOCAL
 
 Focal is a high-performance, minimalist mobile productivity application engineered with React Native, Expo SDK 57, and Reanimated. Built with Swiss graphic design and Apple Human Interface Guidelines in mind, it provides an uncluttered environment for deep cognitive focus, custom session intervals, procedural audio tonalities, and physical haptic resonance.
@@ -42,9 +46,13 @@ Focal is a high-performance, minimalist mobile productivity application engineer
     </td>
   </tr>
   <tr>
-    <td align="center" colspan="2">
+    <td align="center" width="50%">
       <b>05 // Architectural Control Drawer</b><br/><br/>
-      <img src="assets/screenshots/05_drawer_menu.png" width="50%" alt="Settings Drawer Menu" />
+      <img src="assets/screenshots/05_drawer_menu.png" width="100%" alt="Settings Drawer Menu" />
+    </td>
+    <td align="center" width="50%">
+      <b>06 // Apple OS Notification & Surface Hierarchy</b><br/><br/>
+      <img src="assets/screenshots/06_notification_banner.png" width="100%" alt="Apple OS Notification Banner" />
     </td>
   </tr>
 </table>
@@ -70,19 +78,25 @@ Focal is a high-performance, minimalist mobile productivity application engineer
 - Spring-driven physical travel mechanics with dual-state interpolation for OLED dark and high-contrast light environments.
 - Responsive `ModernResetButton` with directional SVG motion and smooth exit animations.
 
-#### 5. Apple OS Notification System
-- Authentic iOS notification banner (`AppleNotificationBanner`) matching Apple HIG metrics: 32px squircle icon, responsive action pill, pan-to-dismiss gesture, and high-contrast Light/Dark surfaces.
+#### 5. Apple OS Notification System & Surface Hierarchy
+- Authentic iOS notification banner (`AppleNotificationBanner`) matching Apple HIG metrics: 32px squircle icon with official transparent Focal logo, responsive action pill, pan-to-dismiss gesture, and high-contrast Light/Dark surfaces.
 - Scheduled local background notifications via Expo Notifications with zero cloud latency.
 
-#### 6. 60–120 FPS Performance & Motion Architecture
+#### 6. Dark Mode Surface Hierarchy & Tonal Elevation
+- Lifted base surface from pure black (`#000000`) to deep obsidian slate (`#111215`), allowing physical drop shadows to naturally render and avoiding the "detached grey box" artifact.
+- Restrained tonal elevation ladder: Base (`#111215`) -> Panel Drawer (`#17181C`) -> Floating System Banner (`#1D1F24`).
+- Ultra-thin 1px ambient rim highlight (`rgba(255, 255, 255, 0.09)`) catching specular light without harsh artificial outlines.
+- Complete Light Mode invariance preserving original high-contrast daytime fidelity.
+
+#### 7. 60–120 FPS Performance & Motion Architecture
 - Full render cascade isolation isolating timer ticks from menus and heavy UI surfaces via `React.memo` and stable callback hooks.
 - Static allocation hoisting for 3D gyro coordinates and chronometer ticks.
 - Dynamic spring physics tuning: gentle entrance, snappy interruptible dismissal.
 - Worklet offloading executing gestures and perspective calculations directly on the native UI thread.
 
-#### 7. Cross-Platform Local Persistence
+#### 8. Cross-Platform Local Persistence
 - Fast key-value persistence with `react-native-mmkv` on iOS/Android and seamless asynchronous fallback on Web runtimes.
-- Preserves theme preferences, notification grants, audio states, and cumulative focus analytics across cold boots.
+- Preserves theme preferences, notification grants, audio states, and cumulative focus analytics across cold boots with backward-compatible legacy key migration.
 
 ---
 
@@ -91,6 +105,10 @@ Focal is a high-performance, minimalist mobile productivity application engineer
 ```
 focal/
 ├── assets/
+│   ├── focal-logo.png         # High-resolution transparent official brand mark
+│   ├── icon.png               # Square 1024x1024 app store icon on #111215 obsidian
+│   ├── android-icon-foreground.png # Android adaptive icon foreground
+│   ├── favicon.png            # Web favicon
 │   └── screenshots/           # High-resolution application captures
 ├── src/
 │   ├── audio/
