@@ -116,7 +116,7 @@ export interface TranslationSchema {
 export const translations: Record<Language, TranslationSchema> = {
   tr: {
     common: {
-      appName: 'FOCUS ENGINE',
+      appName: 'FOCAL',
       minuteShort: 'dk',
       secondShort: 'sn',
       minutes: 'Dakika',
@@ -228,7 +228,7 @@ export const translations: Record<Language, TranslationSchema> = {
   },
   en: {
     common: {
-      appName: 'FOCUS ENGINE',
+      appName: 'FOCAL',
       minuteShort: 'min',
       secondShort: 'sec',
       minutes: 'Minutes',

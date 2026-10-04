@@ -47,7 +47,7 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
   visible,
   title,
   body,
-  appName = 'FOCUS ENGINE',
+  appName = 'FOCAL',
   timeText = 'şimdi',
   actionText = 'Yeni seans',
   dismissText = 'Kapat',
@@ -66,20 +66,20 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
     () =>
       isDark
         ? {
-            surface: 'rgba(48, 52, 60, 0.78)',
-            border: 'rgba(255, 255, 255, 0.15)',
+            surface: 'rgba(29, 31, 36, 0.94)',
+            border: 'rgba(255, 255, 255, 0.09)',
             textPrimary: '#FFFFFF',
-            textSecondary: 'rgba(235, 235, 245, 0.68)',
-            textMuted: 'rgba(235, 235, 245, 0.45)',
-            headerMeta: 'rgba(255, 255, 255, 0.75)',
+            textSecondary: 'rgba(235, 235, 245, 0.65)',
+            textMuted: 'rgba(235, 235, 245, 0.40)',
+            headerMeta: 'rgba(255, 255, 255, 0.72)',
             iconContainerBg: '#FFFFFF',
             iconContainerBorder: 'rgba(255, 255, 255, 0.12)',
             iconGlyph: '#0A84FF',
-            closeBg: 'rgba(255, 255, 255, 0.14)',
-            closeIcon: 'rgba(255, 255, 255, 0.80)',
-            actionBg: 'rgba(255, 255, 255, 0.15)',
-            actionBorder: 'rgba(255, 255, 255, 0.18)',
-            actionText: '#FFFFFF',
+            closeBg: 'rgba(255, 255, 255, 0.08)',
+            closeIcon: 'rgba(255, 255, 255, 0.72)',
+            actionBg: 'rgba(255, 255, 255, 0.09)',
+            actionBorder: 'rgba(255, 255, 255, 0.11)',
+            actionText: '#F5F5F7',
           }
         : {
             surface: 'rgba(244, 246, 249, 0.88)',
@@ -283,15 +283,15 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 16 },
-        shadowOpacity: 0.35,
-        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 14 },
+        shadowOpacity: 0.48,
+        shadowRadius: 26,
       },
       android: {
-        elevation: 12,
+        elevation: 10,
       },
       web: {
-        boxShadow: '0 20px 42px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.18)',
+        boxShadow: '0 18px 40px rgba(0, 0, 0, 0.52), 0 2px 8px rgba(0, 0, 0, 0.28)',
       },
     }),
   },

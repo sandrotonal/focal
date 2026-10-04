@@ -1,6 +1,6 @@
-# FOCUS ENGINE
+# FOCAL
 
-Focus Engine is a high-performance, minimalist mobile productivity application engineered with React Native, Expo SDK 57, and Reanimated. Built with Swiss graphic design and Apple Human Interface Guidelines in mind, it provides an uncluttered environment for deep cognitive focus, custom session intervals, procedural audio tonalities, and physical haptic resonance.
+Focal is a high-performance, minimalist mobile productivity application engineered with React Native, Expo SDK 57, and Reanimated. Built with Swiss graphic design and Apple Human Interface Guidelines in mind, it provides an uncluttered environment for deep cognitive focus, custom session intervals, procedural audio tonalities, and physical haptic resonance.
 
 ---
 
@@ -89,7 +89,7 @@ Focus Engine is a high-performance, minimalist mobile productivity application e
 ### Project Structure
 
 ```
-focus-engine/
+focal/
 ├── assets/
 │   └── screenshots/           # High-resolution application captures
 ├── src/

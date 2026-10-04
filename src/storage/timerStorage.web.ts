@@ -5,7 +5,8 @@ export type TimerState = {
   scheduledNotificationId: string | null;
 };
 
-const STORAGE_KEY = 'focus-engine.timer';
+const STORAGE_KEY = 'focal.timer';
+const LEGACY_STORAGE_KEY = 'focus-engine.timer';
 
 function getLocalStorage() {
   if (typeof window === 'undefined') {
@@ -20,7 +21,8 @@ function getLocalStorage() {
 }
 
 export function loadTimerState(): TimerState {
-  const serialized = getLocalStorage()?.getItem(STORAGE_KEY);
+  const storage = getLocalStorage();
+  const serialized = storage?.getItem(STORAGE_KEY) ?? storage?.getItem(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
     return { elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null };

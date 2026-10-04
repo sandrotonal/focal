@@ -16,7 +16,8 @@ export type FocusPreferences = {
   totalFocusMinutes: number;
 };
 
-const STORAGE_KEY = 'focus-engine.preferences';
+const STORAGE_KEY = 'focal.preferences';
+const LEGACY_STORAGE_KEY = 'focus-engine.preferences';
 const defaults: FocusPreferences = {
   sessionMinutes: 25,
   sessionSeconds: 30,
@@ -44,7 +45,8 @@ function getLocalStorage() {
 }
 
 export function loadPreferences(): FocusPreferences {
-  const serialized = getLocalStorage()?.getItem(STORAGE_KEY);
+  const storage = getLocalStorage();
+  const serialized = storage?.getItem(STORAGE_KEY) ?? storage?.getItem(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
     return defaults;

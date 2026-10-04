@@ -7,19 +7,24 @@ export type TimerState = {
   scheduledNotificationId: string | null;
 };
 
-const STORAGE_KEY = 'focus-engine.timer';
+const STORAGE_KEY = 'focal.timer';
+const LEGACY_STORAGE_KEY = 'focus-engine.timer';
 const fallbackStorage = new Map<string, string>();
 
 let storage: ReturnType<typeof createMMKV> | null = null;
 
 try {
-  storage = createMMKV({ id: 'focus-engine' });
+  storage = createMMKV({ id: 'focal' });
 } catch {
   // Expo Go does not load custom native modules. A development build uses MMKV.
 }
 
 export function loadTimerState(): TimerState {
-  const serialized = storage?.getString(STORAGE_KEY) ?? fallbackStorage.get(STORAGE_KEY);
+  const serialized =
+    storage?.getString(STORAGE_KEY) ??
+    storage?.getString(LEGACY_STORAGE_KEY) ??
+    fallbackStorage.get(STORAGE_KEY) ??
+    fallbackStorage.get(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
     return { elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null };
