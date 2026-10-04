@@ -65,11 +65,22 @@ Focus Engine is a high-performance, minimalist mobile productivity application e
 - Precise tactile communication mapped to timer lifecycle events (start, interval ticks, reset, pause, and step selection).
 - Multi-tier feedback patterns using Light, Medium, and Notification haptics.
 
-#### 4. Custom Native SVG Toggle Architecture
+#### 4. Custom Native SVG Toggle & Reset Architecture
 - Engineered `ModernSwitch` component utilizing custom SVG crosshairs and checkmark paths.
 - Spring-driven physical travel mechanics with dual-state interpolation for OLED dark and high-contrast light environments.
+- Responsive `ModernResetButton` with directional SVG motion and smooth exit animations.
 
-#### 5. Cross-Platform Local Persistence
+#### 5. Apple OS Notification System
+- Authentic iOS notification banner (`AppleNotificationBanner`) matching Apple HIG metrics: 32px squircle icon, responsive action pill, pan-to-dismiss gesture, and high-contrast Light/Dark surfaces.
+- Scheduled local background notifications via Expo Notifications with zero cloud latency.
+
+#### 6. 60–120 FPS Performance & Motion Architecture
+- Full render cascade isolation isolating timer ticks from menus and heavy UI surfaces via `React.memo` and stable callback hooks.
+- Static allocation hoisting for 3D gyro coordinates and chronometer ticks.
+- Dynamic spring physics tuning: gentle entrance, snappy interruptible dismissal.
+- Worklet offloading executing gestures and perspective calculations directly on the native UI thread.
+
+#### 7. Cross-Platform Local Persistence
 - Fast key-value persistence with `react-native-mmkv` on iOS/Android and seamless asynchronous fallback on Web runtimes.
 - Preserves theme preferences, notification grants, audio states, and cumulative focus analytics across cold boots.
 
@@ -92,10 +103,13 @@ focus-engine/
 │   │   │   ├── OnboardingSlide3D.tsx  # 3D perspective worklet container
 │   │   │   └── types.ts               # Strict TypeScript interface contracts
 │   │   ├── ui/
-│   │   │   ├── KineticGradientButton.tsx # Multi-layer rotating gradient CTA
-│   │   │   └── ModernSwitch.tsx          # Custom animated SVG toggle
+│   │   │   ├── AppleNotificationBanner.tsx # Native iOS-style banner notification
+│   │   │   ├── ModernResetButton.tsx       # Fluid interactive reset trigger
+│   │   │   └── ModernSwitch.tsx            # Custom animated SVG toggle
 │   │   ├── LineSidebar.tsx    # Left-edge vertical navigation indicator
 │   │   └── MainFocus3D.tsx    # Kinetic core chronometer
+│   ├── i18n/
+│   │   └── translations.ts    # Bi-lingual English / Turkish translation dictionary
 │   ├── notifications/         # Multi-platform notification scheduler
 │   └── storage/               # MMKV and Web local persistence drivers
 ├── App.tsx                    # Root application entry & state machine

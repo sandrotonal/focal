@@ -24,7 +24,13 @@ type Props = {
   reducedMotion: boolean;
 };
 
-export const MainFocus3D: React.FC<Props> = ({
+const TICK_ITEMS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => ({
+  id: i,
+  isMajor: i % 3 === 0,
+  transform: [{ rotate: `${i * 30}deg` }, { translateY: -130 }] as const,
+}));
+
+export const MainFocus3D: React.FC<Props> = React.memo(({
   isRunning,
   elapsedText,
   progress,
@@ -135,18 +141,15 @@ export const MainFocus3D: React.FC<Props> = ({
 
       {/* Precision Chronometer Ticks */}
       <View style={styles.ticksContainer} pointerEvents="none">
-        {Array.from({ length: 12 }).map((_, i) => (
+        {TICK_ITEMS.map((item) => (
           <View
-            key={i}
+            key={item.id}
             style={[
               styles.tick,
               {
-                backgroundColor: i % 3 === 0 ? primaryColor : hairlineColor,
-                opacity: i % 3 === 0 ? 0.6 : 0.25,
-                transform: [
-                  { rotate: `${i * 30}deg` },
-                  { translateY: -130 },
-                ],
+                backgroundColor: item.isMajor ? primaryColor : hairlineColor,
+                opacity: item.isMajor ? 0.6 : 0.25,
+                transform: item.transform,
               },
             ]}
           />
@@ -177,7 +180,7 @@ export const MainFocus3D: React.FC<Props> = ({
       </View>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1,7 +1,11 @@
 import { Platform } from 'react-native';
 
+type WebAudioWindow = Window & typeof globalThis & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
 // Audio context singleton for Web / PWA
-let webAudioCtx: any = null;
+let webAudioCtx: AudioContext | null = null;
 let isSoundEnabled = true;
 
 export function setSoundEnabled(enabled: boolean): void {
@@ -12,11 +16,12 @@ export function getSoundEnabled(): boolean {
   return isSoundEnabled;
 }
 
-function getWebAudioContext(): any {
+function getWebAudioContext(): AudioContext | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
     return null;
   }
-  const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+  const win = window as unknown as WebAudioWindow;
+  const AudioCtx = win.AudioContext || win.webkitAudioContext;
   if (!AudioCtx) return null;
   if (!webAudioCtx) {
     webAudioCtx = new AudioCtx();

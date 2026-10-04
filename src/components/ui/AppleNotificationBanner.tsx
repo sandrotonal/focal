@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Platform,
   Pressable,
@@ -43,7 +43,7 @@ export interface AppleNotificationBannerProps {
   onDismiss: () => void;
 }
 
-export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = ({
+export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = React.memo(({
   visible,
   title,
   body,
@@ -61,6 +61,45 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
   const isDark = theme === 'dark';
   const translateY = useSharedValue(0);
 
+  // Semantic Design Tokens strictly adhering to Apple OS Design System
+  const tokens = useMemo(
+    () =>
+      isDark
+        ? {
+            surface: 'rgba(48, 52, 60, 0.78)',
+            border: 'rgba(255, 255, 255, 0.15)',
+            textPrimary: '#FFFFFF',
+            textSecondary: 'rgba(235, 235, 245, 0.68)',
+            textMuted: 'rgba(235, 235, 245, 0.45)',
+            headerMeta: 'rgba(255, 255, 255, 0.75)',
+            iconContainerBg: '#FFFFFF',
+            iconContainerBorder: 'rgba(255, 255, 255, 0.12)',
+            iconGlyph: '#0A84FF',
+            closeBg: 'rgba(255, 255, 255, 0.14)',
+            closeIcon: 'rgba(255, 255, 255, 0.80)',
+            actionBg: 'rgba(255, 255, 255, 0.15)',
+            actionBorder: 'rgba(255, 255, 255, 0.18)',
+            actionText: '#FFFFFF',
+          }
+        : {
+            surface: 'rgba(244, 246, 249, 0.88)',
+            border: 'rgba(0, 0, 0, 0.08)',
+            textPrimary: '#1D1D1F',
+            textSecondary: 'rgba(60, 60, 67, 0.70)',
+            textMuted: 'rgba(60, 60, 67, 0.44)',
+            headerMeta: 'rgba(30, 30, 35, 0.75)',
+            iconContainerBg: '#FFFFFF',
+            iconContainerBorder: 'rgba(0, 0, 0, 0.08)',
+            iconGlyph: '#007AFF',
+            closeBg: 'rgba(0, 0, 0, 0.06)',
+            closeIcon: 'rgba(60, 60, 67, 0.70)',
+            actionBg: 'rgba(0, 0, 0, 0.06)',
+            actionBorder: 'rgba(0, 0, 0, 0.08)',
+            actionText: '#1D1D1F',
+          },
+    [isDark]
+  );
+
   const handleAction = useCallback(() => {
     if (hapticsEnabled) {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -75,19 +114,23 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
     onDismiss();
   }, [hapticsEnabled, onDismiss]);
 
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      if (event.translationY < 0) {
-        translateY.value = event.translationY;
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationY < -24 || event.velocityY < -240) {
-        runOnJS(handleDismiss)();
-      } else {
-        translateY.value = withSpring(0, { damping: 22, stiffness: 320 });
-      }
-    });
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .onUpdate((event) => {
+          if (event.translationY < 0) {
+            translateY.value = event.translationY;
+          }
+        })
+        .onEnd((event) => {
+          if (event.translationY < -24 || event.velocityY < -240) {
+            runOnJS(handleDismiss)();
+          } else {
+            translateY.value = withSpring(0, { damping: 22, stiffness: 320 });
+          }
+        }),
+    [handleDismiss, translateY]
+  );
 
   const gestureStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -96,22 +139,6 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
   if (!visible) {
     return null;
   }
-
-  // Exact 1-to-1 match with reference Apple iOS banner design
-  const cardBg = isDark ? 'rgba(50, 54, 62, 0.76)' : 'rgba(240, 242, 246, 0.88)';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.09)';
-  const primaryText = isDark ? '#FFFFFF' : '#111113';
-  const secondaryText = isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(30, 30, 35, 0.68)';
-  const headerMetaText = isDark ? 'rgba(255, 255, 255, 0.75)' : 'rgba(30, 30, 35, 0.75)';
-  const bulletText = isDark ? 'rgba(255, 255, 255, 0.40)' : 'rgba(30, 30, 35, 0.40)';
-  const timeMetaText = isDark ? 'rgba(255, 255, 255, 0.52)' : 'rgba(30, 30, 35, 0.52)';
-
-  const closeBtnBg = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.07)';
-  const closeIconColor = isDark ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.75)';
-
-  const actionBtnBg = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)';
-  const actionBtnBorder = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.10)';
-  const actionBtnTextColor = isDark ? '#FFFFFF' : '#111113';
 
   return (
     <Animated.View
@@ -128,8 +155,8 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
           style={[
             styles.card,
             {
-              backgroundColor: cardBg,
-              borderColor: cardBorder,
+              backgroundColor: tokens.surface,
+              borderColor: tokens.border,
             },
             isDark ? styles.cardShadowDark : styles.cardShadowLight,
             gestureStyle,
@@ -138,41 +165,48 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
           accessibilityRole="alert"
           accessibilityLabel={`${title}. ${body}`}
         >
-          {/* Header Row: White App Icon Squircle, App Name, Time, and Circular Close */}
+          {/* Header Row: Refined App Icon, Name, Time, Subtle Close */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              {/* White App Icon Squircle matching reference */}
-              <View style={styles.appIconContainer}>
+              <View
+                style={[
+                  styles.appIconContainer,
+                  {
+                    backgroundColor: tokens.iconContainerBg,
+                    borderColor: tokens.iconContainerBorder,
+                  },
+                ]}
+              >
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Circle cx={12} cy={12} r={8.5} stroke="#0A84FF" strokeWidth={2.5} />
-                  <Circle cx={12} cy={12} r={3.2} fill="#0A84FF" />
+                  <Circle cx={12} cy={12} r={8.5} stroke={tokens.iconGlyph} strokeWidth={2.4} />
+                  <Circle cx={12} cy={12} r={3.2} fill={tokens.iconGlyph} />
                 </Svg>
               </View>
 
-              <Text style={[styles.appName, { color: headerMetaText }]}>
+              <Text style={[styles.appName, { color: tokens.headerMeta }]}>
                 {appName.toUpperCase()}
               </Text>
-              <Text style={[styles.bullet, { color: bulletText }]}>•</Text>
-              <Text style={[styles.timeText, { color: timeMetaText }]}>{timeText}</Text>
+              <Text style={[styles.bullet, { color: tokens.textMuted }]}>•</Text>
+              <Text style={[styles.timeText, { color: tokens.textMuted }]}>{timeText}</Text>
             </View>
 
-            {/* Circular Close Button */}
+            {/* Subtle Minimal Close Button */}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={dismissText}
-              hitSlop={12}
+              hitSlop={10}
               onPress={handleDismiss}
               style={({ pressed }) => [
                 styles.closeButton,
-                { backgroundColor: closeBtnBg },
+                { backgroundColor: tokens.closeBg },
                 pressed && styles.itemPressed,
               ]}
             >
-              <Svg width={10} height={10} viewBox="0 0 12 12" fill="none">
+              <Svg width={9} height={9} viewBox="0 0 12 12" fill="none">
                 <Path
                   d="M1.5 1.5L10.5 10.5M10.5 1.5L1.5 10.5"
-                  stroke={closeIconColor}
-                  strokeWidth={2}
+                  stroke={tokens.closeIcon}
+                  strokeWidth={1.7}
                   strokeLinecap="round"
                 />
               </Svg>
@@ -182,15 +216,15 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
           {/* Content & Action Row */}
           <View style={styles.contentRow}>
             <View style={styles.textContent}>
-              <Text style={[styles.title, { color: primaryText }]} numberOfLines={1}>
+              <Text style={[styles.title, { color: tokens.textPrimary }]} numberOfLines={1}>
                 {title}
               </Text>
-              <Text style={[styles.body, { color: secondaryText }]} numberOfLines={2}>
+              <Text style={[styles.body, { color: tokens.textSecondary }]} numberOfLines={2}>
                 {body}
               </Text>
             </View>
 
-            {/* Frosted Action Pill ("Yeni seans") */}
+            {/* Restrained Native Action Button ("Yeni seans") */}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={actionText}
@@ -198,13 +232,13 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
               style={({ pressed }) => [
                 styles.actionButton,
                 {
-                  backgroundColor: actionBtnBg,
-                  borderColor: actionBtnBorder,
+                  backgroundColor: tokens.actionBg,
+                  borderColor: tokens.actionBorder,
                 },
                 pressed && styles.actionButtonPressed,
               ]}
             >
-              <Text style={[styles.actionButtonText, { color: actionBtnTextColor }]}>
+              <Text style={[styles.actionButtonText, { color: tokens.actionText }]}>
                 {actionText}
               </Text>
             </Pressable>
@@ -213,7 +247,14 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = (
       </GestureDetector>
     </Animated.View>
   );
-};
+});
+
+const SYSTEM_FONT = Platform.select({
+  ios: 'System',
+  android: 'Roboto',
+  web: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif',
+  default: 'System',
+});
 
 const styles = StyleSheet.create({
   positionWrapper: {
@@ -226,15 +267,15 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 440,
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingTop: 13,
     paddingBottom: 15,
     ...Platform.select({
       web: {
-        backdropFilter: 'blur(30px) saturate(190%)',
-        WebkitBackdropFilter: 'blur(30px) saturate(190%)',
+        backdropFilter: 'blur(28px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(180%)',
       } as unknown as Record<string, unknown>,
     }),
   },
@@ -250,7 +291,7 @@ const styles = StyleSheet.create({
         elevation: 12,
       },
       web: {
-        boxShadow: '0 20px 42px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 20px 42px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.18)',
       },
     }),
   },
@@ -259,14 +300,14 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000000',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0.10,
         shadowRadius: 20,
       },
       android: {
         elevation: 6,
       },
       web: {
-        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.04)',
+        boxShadow: '0 12px 30px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.04)',
       },
     }),
   },
@@ -285,39 +326,48 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.12)',
+      },
+    }),
   },
   appName: {
-    fontFamily: 'System',
+    fontFamily: SYSTEM_FONT,
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   bullet: {
     fontSize: 10,
     marginHorizontal: -2,
   },
   timeText: {
-    fontFamily: 'System',
+    fontFamily: SYSTEM_FONT,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   closeButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemPressed: {
-    opacity: 0.6,
+    opacity: 0.5,
     transform: [{ scale: 0.94 }],
   },
   contentRow: {
@@ -331,22 +381,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily: 'System',
+    fontFamily: SYSTEM_FONT,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -0.3,
   },
   body: {
     marginTop: 3,
-    fontFamily: 'System',
+    fontFamily: SYSTEM_FONT,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '400',
   },
   actionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 18,
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -356,9 +406,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   actionButtonText: {
-    fontFamily: 'System',
+    fontFamily: SYSTEM_FONT,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 0.1,
   },
 });

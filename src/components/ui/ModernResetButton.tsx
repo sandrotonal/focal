@@ -34,7 +34,7 @@ const BUTTON_HEIGHT = 50;
 const BUTTON_COLLAPSED_WIDTH = 50;
 const BUTTON_EXPANDED_WIDTH = 136;
 
-export const ModernResetButton: React.FC<ModernResetButtonProps> = ({
+export const ModernResetButton: React.FC<ModernResetButtonProps> = React.memo(({
   onPress,
   label = 'SIFIRLA',
   accessibilityLabel = 'Sayacı sıfırla',
@@ -207,7 +207,7 @@ export const ModernResetButton: React.FC<ModernResetButtonProps> = ({
       </Pressable>
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, {
@@ -24,7 +24,7 @@ export const ArtworkFocusCore3D: React.FC<{
   scrollX: SharedValue<number>;
   width: number;
   reducedMotion: boolean;
-}> = ({ colors, language, scrollX, width, reducedMotion }) => {
+}> = React.memo(({ colors, language, scrollX, width, reducedMotion }) => {
   const t = translations[language];
   const rotationZ = useSharedValue(0);
   const rotationY = useSharedValue(0);
@@ -115,7 +115,7 @@ export const ArtworkFocusCore3D: React.FC<{
       </Animated.View>
     </View>
   );
-};
+});
 
 // ==========================================
 // 2. SLIDE 2: MINIMALIST PRECISION RHYTHM SELECTOR
@@ -126,35 +126,38 @@ export const ArtworkRhythmPicker: React.FC<{
   selectedMinutes: number;
   onSelect: (minutes: number) => void;
   hapticsEnabled: boolean;
-}> = ({ colors, language, selectedMinutes, onSelect, hapticsEnabled }) => {
+}> = React.memo(({ colors, language, selectedMinutes, onSelect, hapticsEnabled }) => {
   const t = translations[language];
 
-  const rhythmOptions: RhythmOption[] = [
-    {
-      minutes: 25,
-      label: t.onboarding.slide2.pomodoro.label,
-      tag: '01',
-      subtitle: t.onboarding.slide2.pomodoro.subtitle,
-    },
-    {
-      minutes: 45,
-      label: t.onboarding.slide2.deepWork.label,
-      tag: '02',
-      subtitle: t.onboarding.slide2.deepWork.subtitle,
-    },
-    {
-      minutes: 60,
-      label: t.onboarding.slide2.flowState.label,
-      tag: '03',
-      subtitle: t.onboarding.slide2.flowState.subtitle,
-    },
-    {
-      minutes: 90,
-      label: t.onboarding.slide2.ultraSprint.label,
-      tag: '04',
-      subtitle: t.onboarding.slide2.ultraSprint.subtitle,
-    },
-  ];
+  const rhythmOptions = useMemo<RhythmOption[]>(
+    () => [
+      {
+        minutes: 25,
+        label: t.onboarding.slide2.pomodoro.label,
+        tag: '01',
+        subtitle: t.onboarding.slide2.pomodoro.subtitle,
+      },
+      {
+        minutes: 45,
+        label: t.onboarding.slide2.deepWork.label,
+        tag: '02',
+        subtitle: t.onboarding.slide2.deepWork.subtitle,
+      },
+      {
+        minutes: 60,
+        label: t.onboarding.slide2.flowState.label,
+        tag: '03',
+        subtitle: t.onboarding.slide2.flowState.subtitle,
+      },
+      {
+        minutes: 90,
+        label: t.onboarding.slide2.ultraSprint.label,
+        tag: '04',
+        subtitle: t.onboarding.slide2.ultraSprint.subtitle,
+      },
+    ],
+    [t]
+  );
 
   return (
     <View style={styles.rhythmList}>
@@ -235,7 +238,7 @@ export const ArtworkRhythmPicker: React.FC<{
       })}
     </View>
   );
-};
+});
 
 // ==========================================
 // 3. SLIDE 3: SWISS MINIMALIST SENSORY SETTINGS
@@ -249,7 +252,7 @@ export const ArtworkSensorySettings: React.FC<{
   onToggleNotifications: () => void;
   onToggleHaptics: () => void;
   onToggleSound: () => void;
-}> = ({
+}> = React.memo(({
   colors,
   language,
   notificationsEnabled,
@@ -396,7 +399,7 @@ export const ArtworkSensorySettings: React.FC<{
       </Pressable>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   // Slide 1: Focus Core

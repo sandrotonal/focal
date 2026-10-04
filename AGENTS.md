@@ -36,6 +36,9 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Rules
 
+- **CRITICAL GIT RULE:** Asla ve hiçbir koşulda kullanıcıdan o mesajda açık, net ve teyitli onay almadan `git push` veya `git commit` çalıştırma. Kullanıcı açıkça "şimdi pushla" veya "onaylıyorum pushla" demediği sürece tüm değişiklikler SADECE yerel (local) kalmalıdır. Asla `main` branch'ine doğrudan pushlama. (Bkz: `.agents/rules/git-approval.md`)
+- **UI/UX STANDARDS:** Dieter Rams & Apple Hardware minimalizmi esastır. Rastgele cam/şişkin efektler yerine katı, yüksek kontrastlı yüzeyler ve 1px keskin kenarlıklar kullanılır. Açılır/kapanır tüm bileşenlerde çıkış animasyonu zorunludur. (Bkz: `.agents/rules/ui-ux-design.md`)
+- **CODE QUALITY & ARCHITECTURE:** Asla `any` tipi kullanma. Her async işlem `try-catch` bloğunda olmalıdır. Uygulama, commit ve dökümanlarda kesinlikle EMOJİ KULLANILMAZ. Görev bitmeden `npx tsc --noEmit` ile 0 hata teyit edilmelidir. (Bkz: `.agents/rules/code-standards.md`)
 - If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md

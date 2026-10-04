@@ -182,7 +182,7 @@ export const translations: Record<Language, TranslationSchema> = {
       sessionCompletedDesc: 'Hedeflenen odak süresine ulaştın.',
       completedSessions: (count: number) => `Tamamlanan: ${count} seans`,
       resetBadge: 'SIFIRLA',
-      newSession: 'Yeni seans',
+      newSession: 'Yeni Seans',
       now: 'şimdi',
       dismiss: 'Kapat',
       ariaStart: 'Odaklanma sayacını başlat',
@@ -223,7 +223,7 @@ export const translations: Record<Language, TranslationSchema> = {
     },
     notifications: {
       title: 'Odak Seansı Tamamlandı',
-      body: 'Tebrikler! Seansını başarıyla tamamladın.',
+      body: 'Hedeflenen odak süresine ulaştın. Zihnini dinlendirmek için kısa bir mola verebilirsin.',
     },
   },
   en: {
@@ -294,7 +294,7 @@ export const translations: Record<Language, TranslationSchema> = {
       sessionCompletedDesc: 'Target focus duration reached.',
       completedSessions: (count: number) => `Completed: ${count} sessions`,
       resetBadge: 'RESET',
-      newSession: 'New session',
+      newSession: 'New Session',
       now: 'now',
       dismiss: 'Dismiss',
       ariaStart: 'Start focus timer',
@@ -335,7 +335,7 @@ export const translations: Record<Language, TranslationSchema> = {
     },
     notifications: {
       title: 'Focus Session Completed',
-      body: 'Well done! You have successfully completed your session.',
+      body: 'Target focus duration reached. Take a short mindful break to recharge.',
     },
   },
 };

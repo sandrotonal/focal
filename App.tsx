@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -133,7 +133,7 @@ type FocusDrawerProps = {
   onToggleSound: () => void;
 };
 
-function FocusDrawer({
+const FocusDrawer = React.memo(function FocusDrawer({
   drawerWidth,
   visible,
   activeIndex,
@@ -165,22 +165,26 @@ function FocusDrawer({
   const translateX = useSharedValue(-drawerWidth);
   const t = translations[language];
 
-  const menuItems = [
-    t.drawer.menu.focus,
-    t.drawer.menu.duration,
-    t.drawer.menu.theme,
-    t.drawer.menu.notifications,
-    t.drawer.menu.haptics,
-    t.drawer.menu.sound,
-    t.drawer.menu.language,
-  ];
+  const menuItems = useMemo(
+    () => [
+      t.drawer.menu.focus,
+      t.drawer.menu.duration,
+      t.drawer.menu.theme,
+      t.drawer.menu.notifications,
+      t.drawer.menu.haptics,
+      t.drawer.menu.sound,
+      t.drawer.menu.language,
+    ],
+    [t]
+  );
 
   useEffect(() => {
-    translateX.value = withSpring(visible ? 0 : -drawerWidth, {
-      damping: 25,
-      stiffness: 250,
-      mass: 0.9,
-    });
+    translateX.value = withSpring(
+      visible ? 0 : -drawerWidth,
+      visible
+        ? { damping: 25, stiffness: 260, mass: 0.85 }
+        : { damping: 28, stiffness: 320, mass: 0.7 }
+    );
   }, [drawerWidth, translateX, visible]);
 
   const drawerStyle = useAnimatedStyle(() => ({
@@ -514,7 +518,7 @@ function FocusDrawer({
       </Animated.View>
     </>
   );
-}
+});
 
 function FocusEngineScreen() {
   const { width, height } = useWindowDimensions();
@@ -546,8 +550,8 @@ function FocusEngineScreen() {
   const runningRef = useRef(false);
   const scheduledNotificationIdRef = useRef<string | null>(null);
   const drawerWidth = Math.min(326, width * 0.84);
-  const colors = COLORS[theme];
-  const t = translations[language];
+  const colors = useMemo(() => COLORS[theme], [theme]);
+  const t = useMemo(() => translations[language], [language]);
 
   const targetDurationSeconds = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes * 60;
 
@@ -767,6 +771,7 @@ function FocusEngineScreen() {
   }));
 
   const progress = Math.min(elapsed / targetDurationSeconds, 1);
+  const elapsedText = useMemo(() => formatElapsed(elapsed), [elapsed]);
   const saveCurrentPreferences = useCallback((next: Partial<FocusPreferences>) => {
     savePreferences({
       sessionMinutes,
@@ -917,6 +922,18 @@ function FocusEngineScreen() {
     void playTickSound();
   }, [hapticsEnabled]);
 
+  const handleDurationDraftChange = useCallback((value: string) => {
+    setDurationDraft(value.replace(/[^0-9]/g, ''));
+  }, []);
+
+  const handleNotificationsToggleWrapper = useCallback(() => {
+    void handleNotificationsToggle();
+  }, [handleNotificationsToggle]);
+
+  const handleDismissCompletion = useCallback(() => {
+    setShowCompletion(false);
+  }, []);
+
   const completeOnboarding = useCallback((preferences: FocusPreferences) => {
     savePreferences(preferences);
     setLanguage(preferences.language ?? 'tr');
@@ -988,7 +1005,7 @@ function FocusEngineScreen() {
           >
             <MainFocus3D
               isRunning={isRunning}
-              elapsedText={formatElapsed(elapsed)}
+              elapsedText={elapsedText}
               progress={progress}
               sessionMinutes={sessionMinutes}
               accentColor={colors.accent}
@@ -1028,7 +1045,7 @@ function FocusEngineScreen() {
           topInset={insets.top}
           hapticsEnabled={hapticsEnabled}
           onAction={resetTimer}
-          onDismiss={() => setShowCompletion(false)}
+          onDismiss={handleDismissCompletion}
         />
 
         <FocusDrawer
@@ -1050,15 +1067,13 @@ function FocusEngineScreen() {
           onClose={closeDrawer}
           onSelect={handleMenuSelect}
           onChangeDurationUnit={handleChangeDurationUnit}
-          onDurationDraftChange={(value) => setDurationDraft(value.replace(/[^0-9]/g, ''))}
+          onDurationDraftChange={handleDurationDraftChange}
           onCommitDuration={commitDuration}
           onSelectPreset={selectPreset}
           onThemeChange={handleThemeChange}
           onToggleLanguage={handleToggleLanguage}
           onToggleHaptics={handleToggleHaptics}
-          onToggleNotifications={() => {
-            void handleNotificationsToggle();
-          }}
+          onToggleNotifications={handleNotificationsToggleWrapper}
           onToggleSound={handleToggleSound}
         />
       </View>
