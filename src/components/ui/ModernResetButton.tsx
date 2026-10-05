@@ -34,14 +34,14 @@ const BUTTON_HEIGHT = 50;
 const BUTTON_COLLAPSED_WIDTH = 50;
 const BUTTON_EXPANDED_WIDTH = 136;
 
-export const ModernResetButton: React.FC<ModernResetButtonProps> = React.memo(({
+export const ModernResetButton: React.FC<ModernResetButtonProps> = React.memo(function ModernResetButton({
   onPress,
   label = 'SIFIRLA',
   accessibilityLabel = 'Sayacı sıfırla',
   theme = 'dark',
   disabled = false,
   style,
-}) => {
+}) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -248,3 +248,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+ModernResetButton.displayName = 'ModernResetButton';
+

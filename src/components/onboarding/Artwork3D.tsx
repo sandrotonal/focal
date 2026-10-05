@@ -24,7 +24,7 @@ export const ArtworkFocusCore3D: React.FC<{
   scrollX: SharedValue<number>;
   width: number;
   reducedMotion: boolean;
-}> = React.memo(({ colors, language, scrollX, width, reducedMotion }) => {
+}> = React.memo(function ArtworkFocusCore3D({ colors, language, scrollX, width, reducedMotion }) {
   const t = translations[language];
   const rotationZ = useSharedValue(0);
   const rotationY = useSharedValue(0);
@@ -126,7 +126,7 @@ export const ArtworkRhythmPicker: React.FC<{
   selectedMinutes: number;
   onSelect: (minutes: number) => void;
   hapticsEnabled: boolean;
-}> = React.memo(({ colors, language, selectedMinutes, onSelect, hapticsEnabled }) => {
+}> = React.memo(function ArtworkRhythmPicker({ colors, language, selectedMinutes, onSelect, hapticsEnabled }) {
   const t = translations[language];
 
   const rhythmOptions = useMemo<RhythmOption[]>(
@@ -252,7 +252,7 @@ export const ArtworkSensorySettings: React.FC<{
   onToggleNotifications: () => void;
   onToggleHaptics: () => void;
   onToggleSound: () => void;
-}> = React.memo(({
+}> = React.memo(function ArtworkSensorySettings({
   colors,
   language,
   notificationsEnabled,
@@ -261,7 +261,7 @@ export const ArtworkSensorySettings: React.FC<{
   onToggleNotifications,
   onToggleHaptics,
   onToggleSound,
-}) => {
+}) {
   const t = translations[language];
 
   return (
@@ -543,3 +543,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+
+ArtworkFocusCore3D.displayName = 'ArtworkFocusCore3D';
+ArtworkRhythmPicker.displayName = 'ArtworkRhythmPicker';
+ArtworkSensorySettings.displayName = 'ArtworkSensorySettings';
+

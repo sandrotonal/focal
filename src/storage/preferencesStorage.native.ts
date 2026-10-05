@@ -1,4 +1,4 @@
-import { createMMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
@@ -20,6 +20,7 @@ export type FocusPreferences = {
 
 const STORAGE_KEY = 'focal.preferences';
 const LEGACY_STORAGE_KEY = 'focus-engine.preferences';
+
 const defaults: FocusPreferences = {
   sessionMinutes: 25,
   sessionSeconds: 30,
@@ -34,16 +35,21 @@ const defaults: FocusPreferences = {
   totalFocusMinutes: 0,
 };
 
-let storage: ReturnType<typeof createMMKV> | null = null;
+const memoryCache = new Map<string, string>();
 
-try {
-  storage = createMMKV({ id: 'focal' });
-} catch {
-  // Expo Go does not load custom native modules. A development build uses MMKV.
-}
+// Pre-populate memory cache from AsyncStorage on app launch
+void AsyncStorage.multiGet([STORAGE_KEY, LEGACY_STORAGE_KEY])
+  .then((stores) => {
+    stores.forEach(([key, value]) => {
+      if (value) {
+        memoryCache.set(key, value);
+      }
+    });
+  })
+  .catch(() => {});
 
 export function loadPreferences(): FocusPreferences {
-  const serialized = storage?.getString(STORAGE_KEY) ?? storage?.getString(LEGACY_STORAGE_KEY);
+  const serialized = memoryCache.get(STORAGE_KEY) ?? memoryCache.get(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
     return defaults;
@@ -52,12 +58,14 @@ export function loadPreferences(): FocusPreferences {
   try {
     const parsed = JSON.parse(serialized) as Partial<FocusPreferences>;
     return {
-      sessionMinutes: typeof parsed.sessionMinutes === 'number'
-        ? Math.min(720, Math.max(1, Math.round(parsed.sessionMinutes)))
-        : defaults.sessionMinutes,
-      sessionSeconds: typeof parsed.sessionSeconds === 'number'
-        ? Math.min(3600, Math.max(5, Math.round(parsed.sessionSeconds)))
-        : defaults.sessionSeconds,
+      sessionMinutes:
+        typeof parsed.sessionMinutes === 'number'
+          ? Math.min(720, Math.max(1, Math.round(parsed.sessionMinutes)))
+          : defaults.sessionMinutes,
+      sessionSeconds:
+        typeof parsed.sessionSeconds === 'number'
+          ? Math.min(3600, Math.max(5, Math.round(parsed.sessionSeconds)))
+          : defaults.sessionSeconds,
       durationUnit: parsed.durationUnit === 'seconds' ? 'seconds' : 'minutes',
       theme: parsed.theme === 'light' ? 'light' : 'dark',
       language: parsed.language === 'en' ? 'en' : 'tr',
@@ -65,14 +73,24 @@ export function loadPreferences(): FocusPreferences {
       hapticsEnabled: parsed.hapticsEnabled !== false,
       soundEnabled: parsed.soundEnabled !== false,
       onboardingCompleted: parsed.onboardingCompleted === true,
-      completedSessions: typeof parsed.completedSessions === 'number' ? Math.max(0, Math.round(parsed.completedSessions)) : 0,
-      totalFocusMinutes: typeof parsed.totalFocusMinutes === 'number' ? Math.max(0, Math.round(parsed.totalFocusMinutes)) : 0,
+      completedSessions:
+        typeof parsed.completedSessions === 'number'
+          ? Math.max(0, Math.round(parsed.completedSessions))
+          : 0,
+      totalFocusMinutes:
+        typeof parsed.totalFocusMinutes === 'number'
+          ? Math.max(0, Math.round(parsed.totalFocusMinutes))
+          : 0,
     };
   } catch {
     return defaults;
   }
 }
 
-export function savePreferences(preferences: FocusPreferences) {
-  storage?.set(STORAGE_KEY, JSON.stringify(preferences));
+export function savePreferences(preferences: FocusPreferences): void {
+  const serialized = JSON.stringify(preferences);
+  memoryCache.set(STORAGE_KEY, serialized);
+
+  // Asynchronously persist to persistent storage
+  void AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => {});
 }

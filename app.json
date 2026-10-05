@@ -6,10 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "plugins": [
       "expo-notifications",
-      "expo-audio"
+      "expo-audio",
+      "expo-asset"
     ],
     "ios": {
       "supportsTablet": true,

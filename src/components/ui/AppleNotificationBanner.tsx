@@ -16,7 +16,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
 export interface AppleNotificationBannerProps {
@@ -44,7 +44,7 @@ export interface AppleNotificationBannerProps {
   onDismiss: () => void;
 }
 
-export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = React.memo(({
+export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = React.memo(function AppleNotificationBanner({
   visible,
   title,
   body,
@@ -58,7 +58,7 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
   hapticsEnabled = true,
   onAction,
   onDismiss,
-}) => {
+}) {
   const isDark = theme === 'dark';
   const translateY = useSharedValue(0);
 
@@ -421,3 +421,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 });
+
+AppleNotificationBanner.displayName = 'AppleNotificationBanner';
+
