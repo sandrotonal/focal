@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   Platform,
@@ -9,11 +9,10 @@ import {
 } from 'react-native';
 import Animated, {
   runOnJS,
-  SlideInUp,
-  SlideOutUp,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
@@ -53,14 +52,16 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
   actionText = 'Yeni seans',
   dismissText = 'Kapat',
   theme,
-  colors,
   topInset,
   hapticsEnabled = true,
   onAction,
   onDismiss,
 }) {
   const isDark = theme === 'dark';
-  const translateY = useSharedValue(0);
+  const [isRendered, setIsRendered] = useState(visible);
+
+  const translateY = useSharedValue(-200);
+  const opacity = useSharedValue(0);
 
   // Semantic Design Tokens strictly adhering to Apple OS Design System
   const tokens = useMemo(
@@ -115,6 +116,38 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
     onDismiss();
   }, [hapticsEnabled, onDismiss]);
 
+  // Synchronize enter/exit transitions deterministically
+  useEffect(() => {
+    if (visible) {
+      setIsRendered(true);
+      translateY.value = -200;
+      opacity.value = 0;
+      translateY.value = withSpring(0, {
+        damping: 22,
+        stiffness: 280,
+        mass: 0.85,
+      });
+      opacity.value = withTiming(1, { duration: 200 });
+    } else if (isRendered) {
+      translateY.value = withTiming(-200, { duration: 220 });
+      opacity.value = withTiming(0, { duration: 180 }, (finished) => {
+        if (finished) {
+          runOnJS(setIsRendered)(false);
+        }
+      });
+    }
+  }, [isRendered, opacity, translateY, visible]);
+
+  // Safe auto-dismiss after 10 seconds of user inactivity
+  useEffect(() => {
+    if (!visible) return;
+    const autoDismissTimeout = setTimeout(() => {
+      handleDismiss();
+    }, 10000);
+    return () => clearTimeout(autoDismissTimeout);
+  }, [handleDismiss, visible]);
+
+  // Upward pan gesture to dismiss
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
@@ -125,7 +158,9 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
         })
         .onEnd((event) => {
           if (event.translationY < -24 || event.velocityY < -240) {
-            runOnJS(handleDismiss)();
+            translateY.value = withTiming(-200, { duration: 180 }, () => {
+              runOnJS(handleDismiss)();
+            });
           } else {
             translateY.value = withSpring(0, { damping: 22, stiffness: 320 });
           }
@@ -133,23 +168,26 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
     [handleDismiss, translateY]
   );
 
-  const gestureStyle = useAnimatedStyle(() => ({
+  const bannerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
   }));
 
-  if (!visible) {
+  if (!visible && !isRendered) {
     return null;
   }
 
+  // Safe top offset: accounts for notch, Dynamic Island, and Android punch-hole cameras
+  const effectiveTop = Math.max(topInset, Platform.OS === 'android' ? 34 : 16) + 8;
+
   return (
     <Animated.View
-      entering={SlideInUp.springify().damping(19).stiffness(240).mass(0.85)}
-      exiting={SlideOutUp.duration(180)}
       style={[
         styles.positionWrapper,
-        { top: Math.max(topInset + 10, 16) },
+        { top: effectiveTop },
+        bannerAnimatedStyle,
       ]}
-      pointerEvents="box-none"
+      pointerEvents={visible ? 'box-none' : 'none'}
     >
       <GestureDetector gesture={panGesture}>
         <Animated.View
@@ -160,7 +198,6 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
               borderColor: tokens.border,
             },
             isDark ? styles.cardShadowDark : styles.cardShadowLight,
-            gestureStyle,
           ]}
           accessible
           accessibilityRole="alert"
@@ -356,12 +393,11 @@ const styles = StyleSheet.create({
   appName: {
     fontFamily: SYSTEM_FONT,
     fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   bullet: {
     fontSize: 10,
-    marginHorizontal: -2,
   },
   timeText: {
     fontFamily: SYSTEM_FONT,
@@ -369,58 +405,54 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   closeButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemPressed: {
-    opacity: 0.5,
-    transform: [{ scale: 0.94 }],
+    opacity: 0.6,
   },
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 14,
-    marginTop: 2,
+    gap: 12,
   },
   textContent: {
     flex: 1,
   },
   title: {
     fontFamily: SYSTEM_FONT,
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    lineHeight: 18,
+    marginBottom: 2,
   },
   body: {
-    marginTop: 3,
     fontFamily: SYSTEM_FONT,
     fontSize: 13,
-    lineHeight: 18,
     fontWeight: '400',
+    lineHeight: 17,
   },
   actionButton: {
-    height: 32,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+    alignSelf: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   actionButtonPressed: {
-    opacity: 0.72,
-    transform: [{ scale: 0.97 }],
+    opacity: 0.7,
   },
   actionButtonText: {
     fontFamily: SYSTEM_FONT,
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
 });
 
 AppleNotificationBanner.displayName = 'AppleNotificationBanner';
-

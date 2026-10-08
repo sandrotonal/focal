@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -736,10 +737,35 @@ function FocusEngineScreen() {
     }
   }, [clearScheduledCompletion, hapticsEnabled]);
 
-  const gesture = useMemo(
+  const tapGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .maxDuration(350)
+        .maxDistance(18)
+        .onBegin(() => {
+          runningScale.value = withSpring(0.975, {
+            damping: 20,
+            stiffness: 450,
+            mass: 0.5,
+          });
+        })
+        .onFinalize(() => {
+          runningScale.value = withSpring(isRunning ? 1.012 : 1, {
+            damping: 20,
+            stiffness: 300,
+            mass: 0.7,
+          });
+        })
+        .onEnd(() => {
+          runOnJS(toggleTimer)();
+        }),
+    [isRunning, runningScale, toggleTimer],
+  );
+
+  const panGesture = useMemo(
     () =>
       Gesture.Pan()
-        .minDistance(0)
+        .minDistance(12)
         .onStart(() => {
           gestureStartY.value = translateY.value;
           runningScale.value = withSpring(0.982, {
@@ -752,9 +778,9 @@ function FocusEngineScreen() {
           translateY.value = gestureStartY.value + rubberBand(event.translationY, height);
         })
         .onEnd((event) => {
-          const isTap = Math.abs(event.translationY) < 12 && Math.abs(event.velocityY) < 80;
           const shouldReset = event.translationY > RESET_THRESHOLD;
           const shouldToggle = event.translationY < FLICK_THRESHOLD || event.velocityY < FLICK_VELOCITY;
+          const isShortDrag = Math.abs(event.translationY) < 30;
 
           translateY.value = withSpring(0, {
             damping: shouldToggle || shouldReset ? 20 : 24,
@@ -769,15 +795,27 @@ function FocusEngineScreen() {
 
           if (shouldReset) {
             runOnJS(resetTimer)();
-          } else if (isTap || shouldToggle) {
+          } else if (shouldToggle || isShortDrag) {
             runOnJS(toggleTimer)();
           }
         }),
-    [gestureStartY, height, isRunning, resetTimer, toggleTimer, translateY],
+    [gestureStartY, height, isRunning, resetTimer, runningScale, toggleTimer, translateY],
   );
 
+  const gesture = useMemo(
+    () => Gesture.Exclusive(panGesture, tapGesture),
+    [panGesture, tapGesture],
+  );
+
+  const dialScale = useMemo(() => {
+    const availableHeight = height - (insets.top + insets.bottom + 170);
+    const availableWidth = width - 40;
+    const target = Math.min(320, availableHeight, availableWidth);
+    return Math.max(0.78, Math.min(1, target / 320));
+  }, [height, insets.bottom, insets.top, width]);
+
   const animatedCounterStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: runningScale.value }],
+    transform: [{ translateY: translateY.value }, { scale: runningScale.value * dialScale }],
   }));
 
   const progress = Math.min(elapsed / targetDurationSeconds, 1);
@@ -922,7 +960,9 @@ function FocusEngineScreen() {
 
   const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false);
-  }, []);
+    triggerImpact(Haptics.ImpactFeedbackStyle.Light);
+    void playTickSound();
+  }, [triggerImpact]);
 
   const handleMenuSelect = useCallback((index: number) => {
     setActiveMenuIndex(index);
@@ -978,7 +1018,7 @@ function FocusEngineScreen() {
           style={[
             styles.topBar,
             {
-              top: insets.top + 8,
+              top: Math.max(insets.top + 8, Platform.OS === 'android' ? 24 : 16),
               opacity: showCompletion ? 0 : 1,
             },
           ]}
@@ -1038,7 +1078,7 @@ function FocusEngineScreen() {
           </Animated.View>
         </GestureDetector>
 
-        <View style={[styles.footer, { bottom: insets.bottom + 26 }]}>
+        <View style={[styles.footer, { bottom: Math.max(insets.bottom + 26, 26) }]}>
           <Text style={[styles.hint, { color: colors.muted }]}>{t.mainTimer.tapToToggle}</Text>
           {(elapsed > 0 || showCompletion) && (
             <ModernResetButton
