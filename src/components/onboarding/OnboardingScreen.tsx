@@ -36,11 +36,11 @@ type Props = {
   onComplete: (preferences: FocusPreferences) => void;
 };
 
-export const OnboardingScreen: React.FC<Props> = React.memo(({
+export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingScreen({
   colors,
   initialLanguage = 'tr',
   onComplete,
-}) => {
+}) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
@@ -319,7 +319,7 @@ const ProgressPill: React.FC<{
   scrollX: SharedValue<number>;
   width: number;
   colors: AppColors;
-}> = React.memo(({ index, scrollX, width, colors }) => {
+}> = React.memo(function ProgressPill({ index, scrollX, width, colors }) {
   const pillStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
     const opacity = interpolate(scrollX.value, inputRange, [0.2, 1, 0.2], 'clamp');
@@ -459,3 +459,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
+
+OnboardingScreen.displayName = 'OnboardingScreen';
+ProgressPill.displayName = 'ProgressPill';
+

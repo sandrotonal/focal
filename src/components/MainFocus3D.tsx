@@ -30,7 +30,7 @@ const TICK_ITEMS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => ({
   transform: [{ rotate: `${i * 30}deg` }, { translateY: -130 }] as const,
 }));
 
-export const MainFocus3D: React.FC<Props> = React.memo(({
+export const MainFocus3D: React.FC<Props> = React.memo(function MainFocus3D({
   isRunning,
   elapsedText,
   progress,
@@ -42,7 +42,7 @@ export const MainFocus3D: React.FC<Props> = React.memo(({
   hairlineColor,
   translateY,
   reducedMotion,
-}) => {
+}) {
   const rotationZ = useSharedValue(0);
   const pulse = useSharedValue(0);
 
@@ -269,3 +269,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
   },
 });
+
+MainFocus3D.displayName = 'MainFocus3D';
+

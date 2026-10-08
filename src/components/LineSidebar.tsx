@@ -20,12 +20,12 @@ type LineSidebarProps = {
 
 const ITEM_HEIGHT = 48;
 
-export const LineSidebar: React.FC<LineSidebarProps> = React.memo(({
+export const LineSidebar: React.FC<LineSidebarProps> = React.memo(function LineSidebar({
   items,
   activeIndex,
   onSelect,
   colors,
-}) => {
+}) {
   const activePosition = useSharedValue(activeIndex);
 
   useEffect(() => {
@@ -124,3 +124,5 @@ const styles = StyleSheet.create({
     color: '#F5F5F7',
   },
 });
+
+LineSidebar.displayName = 'LineSidebar';

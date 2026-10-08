@@ -14,13 +14,13 @@ type Props = {
   reducedMotion: boolean;
 };
 
-export const OnboardingSlide3D: React.FC<Props> = React.memo(({
+export const OnboardingSlide3D: React.FC<Props> = React.memo(function OnboardingSlide3D({
   index,
   width,
   scrollX,
   children,
   reducedMotion,
-}) => {
+}) {
   const containerStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
@@ -66,3 +66,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+OnboardingSlide3D.displayName = 'OnboardingSlide3D';
+

@@ -1,4 +1,4 @@
-import { createMMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type TimerState = {
   elapsed: number;
@@ -9,22 +9,22 @@ export type TimerState = {
 
 const STORAGE_KEY = 'focal.timer';
 const LEGACY_STORAGE_KEY = 'focus-engine.timer';
-const fallbackStorage = new Map<string, string>();
 
-let storage: ReturnType<typeof createMMKV> | null = null;
+const memoryCache = new Map<string, string>();
 
-try {
-  storage = createMMKV({ id: 'focal' });
-} catch {
-  // Expo Go does not load custom native modules. A development build uses MMKV.
-}
+// Pre-populate memory cache from AsyncStorage on app launch
+void AsyncStorage.multiGet([STORAGE_KEY, LEGACY_STORAGE_KEY])
+  .then((stores) => {
+    stores.forEach(([key, value]) => {
+      if (value) {
+        memoryCache.set(key, value);
+      }
+    });
+  })
+  .catch(() => {});
 
 export function loadTimerState(): TimerState {
-  const serialized =
-    storage?.getString(STORAGE_KEY) ??
-    storage?.getString(LEGACY_STORAGE_KEY) ??
-    fallbackStorage.get(STORAGE_KEY) ??
-    fallbackStorage.get(LEGACY_STORAGE_KEY);
+  const serialized = memoryCache.get(STORAGE_KEY) ?? memoryCache.get(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
     return { elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null };
@@ -36,20 +36,20 @@ export function loadTimerState(): TimerState {
       elapsed: typeof parsed.elapsed === 'number' ? Math.max(0, parsed.elapsed) : 0,
       isRunning: parsed.isRunning === true,
       startedAt: typeof parsed.startedAt === 'number' ? parsed.startedAt : null,
-      scheduledNotificationId: typeof parsed.scheduledNotificationId === 'string'
-        ? parsed.scheduledNotificationId
-        : null,
+      scheduledNotificationId:
+        typeof parsed.scheduledNotificationId === 'string'
+          ? parsed.scheduledNotificationId
+          : null,
     };
   } catch {
     return { elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null };
   }
 }
 
-export function saveTimerState(state: TimerState) {
+export function saveTimerState(state: TimerState): void {
   const serialized = JSON.stringify(state);
-  storage?.set(STORAGE_KEY, serialized);
+  memoryCache.set(STORAGE_KEY, serialized);
 
-  if (!storage) {
-    fallbackStorage.set(STORAGE_KEY, serialized);
-  }
+  // Asynchronously persist to persistent storage
+  void AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => {});
 }

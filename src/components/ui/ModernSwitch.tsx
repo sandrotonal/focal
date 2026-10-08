@@ -28,7 +28,7 @@ const TRAVEL_DISTANCE = SWITCH_WIDTH - CIRCLE_DIAMETER - OFFSET * 2; // 22px
 const EFFECT_WIDTH = CIRCLE_DIAMETER / 2; // 9px
 const EFFECT_HEIGHT = EFFECT_WIDTH / 2 - 1; // 3.5px
 
-export const ModernSwitch: React.FC<ModernSwitchProps> = React.memo(({
+export const ModernSwitch: React.FC<ModernSwitchProps> = React.memo(function ModernSwitch({
   value,
   onValueChange,
   checkedBg = '#00DA50',
@@ -37,7 +37,7 @@ export const ModernSwitch: React.FC<ModernSwitchProps> = React.memo(({
   checkmarkColor,
   accessibilityLabel = 'Seçenek anahtarı',
   disabled = false,
-}) => {
+}) {
   const progress = useSharedValue(value ? 1 : 0);
 
   useEffect(() => {
@@ -167,3 +167,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+ModernSwitch.displayName = 'ModernSwitch';
+

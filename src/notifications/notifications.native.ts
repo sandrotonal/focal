@@ -1,34 +1,59 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
+import type * as NotificationsType from 'expo-notifications';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+const isExpoGoOnAndroid = Platform.OS === 'android' && isRunningInExpoGo();
 
-if (Platform.OS === 'android') {
-  void Notifications.setNotificationChannelAsync('focus-completion', {
-    name: 'Odak Tamamlandı',
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#0A84FF',
-    sound: 'default',
-  });
+let notificationsModule: typeof NotificationsType | null = null;
+
+if (!isExpoGoOnAndroid) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    notificationsModule = require('expo-notifications') as typeof NotificationsType;
+
+    notificationsModule.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+
+    if (Platform.OS === 'android') {
+      void notificationsModule.setNotificationChannelAsync('focus-completion', {
+        name: 'Odak Tamamlandı',
+        importance: notificationsModule.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#0A84FF',
+        sound: 'default',
+      });
+    }
+  } catch (error) {
+    console.warn('[FOCAL] expo-notifications initialization bypassed:', error);
+    notificationsModule = null;
+  }
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
+  if (!notificationsModule) {
+    return false;
+  }
+
   try {
-    const current = await Notifications.getPermissionsAsync();
-    if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
+    const current = await notificationsModule.getPermissionsAsync();
+    if (
+      current.granted ||
+      current.ios?.status === notificationsModule.IosAuthorizationStatus.PROVISIONAL
+    ) {
       return true;
     }
 
-    const requested = await Notifications.requestPermissionsAsync();
-    return Boolean(requested.granted || requested.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL);
+    const requested = await notificationsModule.requestPermissionsAsync();
+    return Boolean(
+      requested.granted ||
+        requested.ios?.status === notificationsModule.IosAuthorizationStatus.PROVISIONAL
+    );
   } catch {
     return false;
   }
@@ -39,20 +64,20 @@ export async function scheduleFocusCompletion(
   title = 'Odak Seansı Tamamlandı',
   body = 'Derin çalışma turunu başarıyla tamamladın. Kısa bir mola verebilirsin.'
 ): Promise<string | null> {
-  if (seconds <= 0) {
+  if (seconds <= 0 || !notificationsModule) {
     return null;
   }
 
   try {
-    return await Notifications.scheduleNotificationAsync({
+    return await notificationsModule.scheduleNotificationAsync({
       content: {
         title,
         body,
         sound: 'default',
-        priority: Notifications.AndroidNotificationPriority.HIGH,
+        priority: notificationsModule.AndroidNotificationPriority.HIGH,
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        type: notificationsModule.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds,
         repeats: false,
         channelId: 'focus-completion',
@@ -64,11 +89,12 @@ export async function scheduleFocusCompletion(
 }
 
 export async function cancelFocusCompletion(identifier: string | null): Promise<void> {
-  if (identifier) {
+  if (identifier && notificationsModule) {
     try {
-      await Notifications.cancelScheduledNotificationAsync(identifier);
+      await notificationsModule.cancelScheduledNotificationAsync(identifier);
     } catch {
       // safe fallback
     }
   }
 }
+
