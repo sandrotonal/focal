@@ -89,15 +89,25 @@ Ayrıca:
 - release instructions
 netleştirildi.
 Tüm 6 README vitrin ekran görüntüsü (Ritim Çarkı, Pomodoro Üçlüsü, Minimalist Sayaç, Bildirim Bannerı, Onboarding) güncel arayüz ile çekildi ve optimize edildi.
-Benim Focal için öncelik sıralamam
-Öncelik	İş	Durum
-🔴 1	Gerçek cihaz performans testi	Yapılmalı
-🔴 2	Timer/lifecycle edge-case testleri	Yapılmalı
-🟢 3	Unit test altyapısı	Tamamlandı (22/22 Test)
-🟠 4	App.tsx'i parçalama	Önerilir
-🟢 5	Büyük asset optimizasyonu	Tamamlandı
-🟠 6	Accessibility gerçek cihaz testi	Yapılmalı
-🟢 7	README & Ekran Görüntüleri	Tamamlandı (6 Vitrin Görseli Güncellendi)
-🟢 8	Yeni özellikler	Ritim Çarkı & Pomodoro Eklendi
+9. Ses Tasarimi ve Web/Mobil Akustik Paritesi (Tamamlandi)
+- Brief v1.0: 1.5s minimal kristal can (focus_complete_crystal.wav / focus-complete.wav, C#6 -> E6 -> G#6, sicak alt harmonikler, yumusak atak, havadar sonlanma, -1.2 dBFS tepe normalizasyonu).
+- Iki ek ozgun ses: Kutup Isigi (focus_complete_aurora.wav) ve Tibet Canagi (focus_complete_tibetan.wav).
+- Web Audio API ile Expo native oynatim arasinda 1:1 frekans ve zarf paritesi saglandi.
+- Native ses motoru expo-audio asenkron seek yaris kosullari giderildi; arka plan ve sessiz mod izinleri optimize edildi.
 
+10. Apple Dynamic Island Bildirim Uyumu (Tamamlandi)
+- AppleNotificationBanner bilesenine Dynamic Island tespiti (topInset >= 50) eklendi.
+- Ada altina oturan 28px kavisli ada formu ve ada genislemesini simule eden ust baglanti kapsulu eklendi.
 
+Benim Focal icin oncelik siralamasi
+Oncelik	Is	Durum
+1	Gercek cihaz performans testi	Yapilmali
+2	Timer/lifecycle edge-case testleri	Yapilmali
+3	Unit test altyapisi	Tamamlandi (22/22 Test)
+4	App.tsx'i parcalama	Onerilir
+5	Buyuk asset optimizasyonu	Tamamlandi
+6	Accessibility gercek cihaz testi	Yapilmali
+7	README & Ekran Goruntuleri	Tamamlandi (6 Vitrin Gorseli Guncellendi)
+8	Yeni ozellikler	Ritim Carki & Pomodoro Eklendi
+9	Ses Tasarimi & Mobil Parite	Tamamlandi (Kristal, Kutup Isigi, Tibet)
+10	Apple Dynamic Island Banner	Tamamlandi

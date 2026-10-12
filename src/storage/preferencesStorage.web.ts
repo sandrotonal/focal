@@ -1,7 +1,7 @@
 export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
 export type DurationUnit = 'minutes' | 'seconds';
-export type SoundAlertTone = 'clarity' | 'tibetan' | 'mechanical';
+export type SoundAlertTone = 'crystal' | 'aurora' | 'clarity' | 'tibetan' | 'mechanical';
 export type PomodoroStage = 'focus' | 'shortBreak' | 'longBreak';
 
 export type FocusPreferences = {
@@ -41,7 +41,7 @@ const defaults: FocusPreferences = {
   pomodoroCycle: 1,
   pomodoroShortBreakMinutes: 5,
   pomodoroLongBreakMinutes: 15,
-  soundAlertTone: 'clarity',
+  soundAlertTone: 'crystal',
 };
 
 function getLocalStorage() {

@@ -185,7 +185,10 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
   }
 
   // Safe top offset: accounts for notch, Dynamic Island, and Android punch-hole cameras
-  const effectiveTop = Math.max(topInset, Platform.OS === 'android' ? 34 : 16) + 8;
+  const isDynamicIsland = (Platform.OS === 'ios' || Platform.OS === 'web') && topInset >= 50;
+  const effectiveTop = isDynamicIsland
+    ? topInset + 4
+    : Math.max(topInset, Platform.OS === 'android' ? 34 : 16) + 8;
 
   return (
     <Animated.View
@@ -200,6 +203,7 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
         <Animated.View
           style={[
             styles.card,
+            isDynamicIsland && styles.cardDynamicIsland,
             {
               backgroundColor: tokens.surface,
               borderColor: tokens.border,
@@ -210,6 +214,18 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
           accessibilityRole="alert"
           accessibilityLabel={`${title}. ${body}`}
         >
+          {/* Dynamic Island Adaptive Capsule Indicator */}
+          {isDynamicIsland && (
+            <View style={styles.dynamicIslandIndicatorWrapper}>
+              <View
+                style={[
+                  styles.dynamicIslandIndicator,
+                  { backgroundColor: tokens.border },
+                ]}
+              />
+            </View>
+          )}
+
           {/* Header Row: Refined App Icon, Name, Time, Subtle Close */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
@@ -326,6 +342,22 @@ const styles = StyleSheet.create({
         WebkitBackdropFilter: 'blur(28px) saturate(180%)',
       } as unknown as Record<string, unknown>,
     }),
+  },
+  cardDynamicIsland: {
+    borderRadius: 28,
+    paddingTop: 10,
+    paddingBottom: 15,
+  },
+  dynamicIslandIndicatorWrapper: {
+    alignItems: 'center',
+    marginBottom: 6,
+    marginTop: -3,
+  },
+  dynamicIslandIndicator: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.65,
   },
   cardShadowDark: {
     ...Platform.select({

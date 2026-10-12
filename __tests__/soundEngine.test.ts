@@ -35,11 +35,13 @@ describe('Sound Engine', () => {
     expect(() => {
       playTickSound();
       playFocusStartSound();
+      playFocusCompleteSound('crystal');
+      playFocusCompleteSound('aurora');
       playFocusCompleteSound('clarity');
       playFocusCompleteSound('tibetan');
       playFocusCompleteSound('mechanical');
       playBreakCompleteSound();
-      previewToneSound('tibetan');
+      previewToneSound('crystal');
       playResetSound();
     }).not.toThrow();
   });
@@ -50,11 +52,13 @@ describe('Sound Engine', () => {
     expect(() => {
       playTickSound();
       playFocusStartSound();
+      playFocusCompleteSound('crystal');
+      playFocusCompleteSound('aurora');
       playFocusCompleteSound('clarity');
       playFocusCompleteSound('tibetan');
       playFocusCompleteSound('mechanical');
       playBreakCompleteSound();
-      previewToneSound('mechanical');
+      previewToneSound('aurora');
       playResetSound();
     }).not.toThrow();
   });

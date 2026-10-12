@@ -50,11 +50,15 @@ export interface TranslationSchema {
       soundAlertTone: string;
       soundAlertToneSubtitle: string;
       soundTones: {
+        crystal: string;
+        aurora: string;
         clarity: string;
         tibetan: string;
         mechanical: string;
       };
       soundToneSubtitles: {
+        crystal: string;
+        aurora: string;
         clarity: string;
         tibetan: string;
         mechanical: string;
@@ -206,14 +210,18 @@ export const translations: Record<Language, TranslationSchema> = {
         soundAlertTone: 'Bitiş Tonu',
         soundAlertToneSubtitle: 'Rezonans karakteri',
         soundTones: {
+          crystal: 'Kristal Çan',
+          aurora: 'Kutup Işığı',
           clarity: 'Marimba',
           tibetan: 'Zen Çanı',
-          mechanical: 'Kristal',
+          mechanical: 'Mekanik Tık',
         },
         soundToneSubtitles: {
+          crystal: '3 yükselen kristal tınısı',
+          aurora: 'Huzurlu eterik armoni',
           clarity: 'Sıcak ahşap akoru',
-          tibetan: 'Huzurlu meditasyon kasesi',
-          mechanical: 'Berrak hava ışıltısı',
+          tibetan: '528Hz meditasyon kasesi',
+          mechanical: 'Hassas kronometre darbesi',
         },
         pomodoroPlan: {
           title: 'RİTİM PLANI',
@@ -361,14 +369,18 @@ export const translations: Record<Language, TranslationSchema> = {
         soundAlertTone: 'Alert Tone',
         soundAlertToneSubtitle: 'Resonance character',
         soundTones: {
+          crystal: 'Crystal Chime',
+          aurora: 'Aurora Chime',
           clarity: 'Marimba',
-          tibetan: 'Zen Bell',
-          mechanical: 'Crystal',
+          tibetan: 'Zen Gong',
+          mechanical: 'Mechanical Click',
         },
         soundToneSubtitles: {
-          clarity: 'Warm wood triad',
-          tibetan: 'Mindful singing bowl',
-          mechanical: 'Airy crystal shimmer',
+          crystal: '3 ascending crystal glass notes',
+          aurora: 'Tranquil ethereal harmony',
+          clarity: 'Warm rosewood triad',
+          tibetan: '528Hz meditation bowl',
+          mechanical: 'Precision chronometer impulse',
         },
         pomodoroPlan: {
           title: 'RHYTHM PLAN',

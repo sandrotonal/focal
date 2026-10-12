@@ -743,7 +743,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                     </Text>
                   </View>
 
-                  {(['clarity', 'tibetan', 'mechanical'] as const).map((toneKey) => {
+                  {(['crystal', 'aurora', 'clarity', 'tibetan', 'mechanical'] as const).map((toneKey) => {
                     const isSelected = soundAlertTone === toneKey;
                     const label = t.drawer.sections.soundTones[toneKey];
                     const subtitle = t.drawer.sections.soundToneSubtitles[toneKey];
