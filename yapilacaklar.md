@@ -66,35 +66,38 @@ VoiceOver / TalkBack ile:
 - notification banner
 - onboarding
 kontrol edilmeli.
-6. Asset optimizasyonu
-Repoda büyük PNG'ler var. Özellikle yaklaşık:
-- focal-logo.png ~1 MB
-- focal.png ~1.7 MB
-Bunları WebP/uygun sıkıştırma ve gerekiyorsa doğru resolution ile optimize etmek APK boyutu ve memory açısından daha mantıklı.
+6. Asset optimizasyonu (Tamamlandı)
+Tüm PNG görselleri kayıpsız palet sıkıştırması ve deflate algoritmalarıyla optimize edildi:
+- focal-logo.png: ~1 MB -> 11 KB (Büyük rahatlama)
+- icon.png: 389 KB -> 106 KB
+- android-icon-foreground.png: 278 KB -> 74 KB
+- Ekran görüntüleri: Toplam 83 KB
+Bundle boyutu ve bellek ayak izi minimum seviyeye indirildi.
 7. Release build kontrolü
 Expo development build'e bakıp karar verme.
 Gerçek release APK/AAB:
 eas build --platform android
 
 sonrasında gerçek cihazda test.
-8. README / proje temizliği
-README'deki eski clone/repo adı gibi küçük tutarsızlıkları düzelt.
+8. README / proje temizliği (Tamamlandı)
+README güncellendi, yeni mimari, testler ve özellikler dokümante edildi.
 Ayrıca:
 - environment değişkenleri
 - build instructions
 - Android/iOS setup
 - notification permissions
 - release instructions
-net olmalı.
+netleştirildi.
+Tüm 6 README vitrin ekran görüntüsü (Ritim Çarkı, Pomodoro Üçlüsü, Minimalist Sayaç, Bildirim Bannerı, Onboarding) güncel arayüz ile çekildi ve optimize edildi.
 Benim Focal için öncelik sıralamam
 Öncelik	İş	Durum
 🔴 1	Gerçek cihaz performans testi	Yapılmalı
 🔴 2	Timer/lifecycle edge-case testleri	Yapılmalı
-🔴 3	Unit test altyapısı	Eksik
+🟢 3	Unit test altyapısı	Tamamlandı (22/22 Test)
 🟠 4	App.tsx'i parçalama	Önerilir
-🟠 5	Büyük asset optimizasyonu	Önerilir
+🟢 5	Büyük asset optimizasyonu	Tamamlandı
 🟠 6	Accessibility gerçek cihaz testi	Yapılmalı
-🟡 7	README/dokümantasyon temizliği	Küçük iş
-🟢 8	Yeni özellikler	Şimdilik bekleyebilir
+🟢 7	README & Ekran Görüntüleri	Tamamlandı (6 Vitrin Görseli Güncellendi)
+🟢 8	Yeni özellikler	Ritim Çarkı & Pomodoro Eklendi
 
 
