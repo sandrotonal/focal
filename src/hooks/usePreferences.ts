@@ -5,12 +5,14 @@ import {
   DurationUnit,
   FocusPreferences,
   Language,
+  SoundAlertTone,
   ThemeMode,
   loadPreferences,
   savePreferences,
 } from '../storage/preferencesStorage';
 import {
   playTickSound,
+  previewToneSound,
   setSoundEnabled as setSoundEngineEnabled,
 } from '../audio/soundEngine';
 import { requestNotificationPermission } from '../notifications/notifications';
@@ -31,6 +33,11 @@ function getInitialPreferences(): FocusPreferences {
       onboardingCompleted: false,
       completedSessions: 0,
       totalFocusMinutes: 0,
+      pomodoroEnabled: false,
+      pomodoroCycle: 1,
+      pomodoroShortBreakMinutes: 5,
+      pomodoroLongBreakMinutes: 15,
+      soundAlertTone: 'clarity',
     };
   }
 }
@@ -54,6 +61,15 @@ export function usePreferences() {
   const [soundEnabled, setSoundEnabled] = useState(initial.soundEnabled ?? true);
   const [completedSessions, setCompletedSessions] = useState(initial.completedSessions ?? 0);
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(initial.totalFocusMinutes ?? 0);
+  const [pomodoroEnabled, setPomodoroEnabled] = useState(initial.pomodoroEnabled ?? false);
+  const [pomodoroCycle, setPomodoroCycle] = useState(initial.pomodoroCycle ?? 1);
+  const [pomodoroShortBreakMinutes, setPomodoroShortBreakMinutesState] = useState(
+    initial.pomodoroShortBreakMinutes ?? 5
+  );
+  const [pomodoroLongBreakMinutes, setPomodoroLongBreakMinutesState] = useState(
+    initial.pomodoroLongBreakMinutes ?? 15
+  );
+  const [soundAlertTone, setSoundAlertTone] = useState<SoundAlertTone>(initial.soundAlertTone ?? 'clarity');
 
   const saveCurrentPreferences = useCallback((patch: Partial<FocusPreferences>) => {
     try {
@@ -211,6 +227,67 @@ export function usePreferences() {
     });
   }, [completedSessions, saveCurrentPreferences, totalFocusMinutes]);
 
+  const handleTogglePomodoro = useCallback(() => {
+    const nextPomodoro = !pomodoroEnabled;
+    setPomodoroEnabled(nextPomodoro);
+    saveCurrentPreferences({ pomodoroEnabled: nextPomodoro });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, pomodoroEnabled, saveCurrentPreferences]);
+
+  const handleSelectSoundTone = useCallback((tone: SoundAlertTone) => {
+    setSoundAlertTone(tone);
+    saveCurrentPreferences({ soundAlertTone: tone });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    previewToneSound(tone);
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
+  const handleSetPomodoroCycle = useCallback((cycle: number) => {
+    const clamped = Math.min(4, Math.max(1, Math.round(cycle)));
+    setPomodoroCycle(clamped);
+    saveCurrentPreferences({ pomodoroCycle: clamped });
+  }, [saveCurrentPreferences]);
+
+  const setPomodoroShortBreakMinutes = useCallback((m: number) => {
+    const clamped = Math.max(1, Math.min(60, Math.round(m)));
+    setPomodoroShortBreakMinutesState(clamped);
+    saveCurrentPreferences({ pomodoroShortBreakMinutes: clamped });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
+  const setPomodoroLongBreakMinutes = useCallback((m: number) => {
+    const clamped = Math.max(1, Math.min(60, Math.round(m)));
+    setPomodoroLongBreakMinutesState(clamped);
+    saveCurrentPreferences({ pomodoroLongBreakMinutes: clamped });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
+  const setPomodoroPreset = useCallback((focusM: number, shortM: number, longM: number) => {
+    setSessionMinutes(focusM);
+    setDurationDraft(String(focusM));
+    setPomodoroShortBreakMinutesState(shortM);
+    setPomodoroLongBreakMinutesState(longM);
+    saveCurrentPreferences({
+      sessionMinutes: focusM,
+      pomodoroShortBreakMinutes: shortM,
+      pomodoroLongBreakMinutes: longM,
+    });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
   return {
     isPreferencesLoaded,
     onboardingCompleted,
@@ -225,6 +302,11 @@ export function usePreferences() {
     soundEnabled,
     completedSessions,
     totalFocusMinutes,
+    pomodoroEnabled,
+    pomodoroCycle,
+    pomodoroShortBreakMinutes,
+    pomodoroLongBreakMinutes,
+    soundAlertTone,
     saveCurrentPreferences,
     handleChangeDurationUnit,
     handleThemeChange,
@@ -232,6 +314,12 @@ export function usePreferences() {
     handleToggleHaptics,
     handleToggleSound,
     handleNotificationsToggle,
+    handleTogglePomodoro,
+    handleSelectSoundTone,
+    setPomodoroCycle: handleSetPomodoroCycle,
+    setPomodoroShortBreakMinutes,
+    setPomodoroLongBreakMinutes,
+    setPomodoroPreset,
     selectPreset,
     commitDuration,
     handleDurationDraftChange,

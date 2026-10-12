@@ -22,6 +22,8 @@ type Props = {
   hairlineColor: string;
   translateY: SharedValue<number>;
   reducedMotion: boolean;
+  stageLabel?: string;
+  isBreak?: boolean;
 };
 
 const TICK_ITEMS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => ({
@@ -42,6 +44,8 @@ export const MainFocus3D: React.FC<Props> = React.memo(function MainFocus3D({
   hairlineColor,
   translateY,
   reducedMotion,
+  stageLabel,
+  isBreak,
 }) {
   const rotationZ = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -158,6 +162,17 @@ export const MainFocus3D: React.FC<Props> = React.memo(function MainFocus3D({
 
       {/* Central Pure Numeral & Subtle Progress */}
       <View style={styles.content}>
+        {stageLabel ? (
+          <Text
+            style={[
+              styles.telemetryHeader,
+              { color: isBreak ? accentColor : mutedColor },
+            ]}
+            maxFontSizeMultiplier={1.2}
+          >
+            {stageLabel}
+          </Text>
+        ) : null}
         <Text
           style={[styles.timerNumeral, { color: primaryColor }]}
           maxFontSizeMultiplier={1.2}

@@ -1,6 +1,8 @@
 export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
 export type DurationUnit = 'minutes' | 'seconds';
+export type SoundAlertTone = 'clarity' | 'tibetan' | 'mechanical';
+export type PomodoroStage = 'focus' | 'shortBreak' | 'longBreak';
 
 export type FocusPreferences = {
   sessionMinutes: number;
@@ -14,6 +16,11 @@ export type FocusPreferences = {
   onboardingCompleted: boolean;
   completedSessions: number;
   totalFocusMinutes: number;
+  pomodoroEnabled: boolean;
+  pomodoroCycle: number;
+  pomodoroShortBreakMinutes: number;
+  pomodoroLongBreakMinutes: number;
+  soundAlertTone: SoundAlertTone;
 };
 
 const STORAGE_KEY = 'focal.preferences';
@@ -30,6 +37,11 @@ const defaults: FocusPreferences = {
   onboardingCompleted: false,
   completedSessions: 0,
   totalFocusMinutes: 0,
+  pomodoroEnabled: false,
+  pomodoroCycle: 1,
+  pomodoroShortBreakMinutes: 5,
+  pomodoroLongBreakMinutes: 15,
+  soundAlertTone: 'clarity',
 };
 
 function getLocalStorage() {
@@ -70,6 +82,20 @@ export function loadPreferences(): FocusPreferences {
       onboardingCompleted: parsed.onboardingCompleted === true,
       completedSessions: typeof parsed.completedSessions === 'number' ? Math.max(0, Math.round(parsed.completedSessions)) : 0,
       totalFocusMinutes: typeof parsed.totalFocusMinutes === 'number' ? Math.max(0, Math.round(parsed.totalFocusMinutes)) : 0,
+      pomodoroEnabled: parsed.pomodoroEnabled === true,
+      pomodoroCycle: typeof parsed.pomodoroCycle === 'number'
+        ? Math.min(4, Math.max(1, Math.round(parsed.pomodoroCycle)))
+        : 1,
+      pomodoroShortBreakMinutes: typeof parsed.pomodoroShortBreakMinutes === 'number'
+        ? Math.min(60, Math.max(1, Math.round(parsed.pomodoroShortBreakMinutes)))
+        : 5,
+      pomodoroLongBreakMinutes: typeof parsed.pomodoroLongBreakMinutes === 'number'
+        ? Math.min(120, Math.max(1, Math.round(parsed.pomodoroLongBreakMinutes)))
+        : 15,
+      soundAlertTone:
+        parsed.soundAlertTone === 'tibetan' || parsed.soundAlertTone === 'mechanical'
+          ? parsed.soundAlertTone
+          : 'clarity',
     };
   } catch {
     return defaults;

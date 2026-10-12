@@ -26,6 +26,8 @@ describe('timerStorage (web)', () => {
       isRunning: false,
       startedAt: null,
       scheduledNotificationId: null,
+      timerMode: 'focus',
+      pomodoroCycle: 1,
     });
   });
 
@@ -35,6 +37,8 @@ describe('timerStorage (web)', () => {
       isRunning: true,
       startedAt: 1700000000000,
       scheduledNotificationId: 'notif-123',
+      timerMode: 'shortBreak',
+      pomodoroCycle: 2,
     };
 
     saveTimerState(sampleState);
@@ -64,6 +68,8 @@ describe('timerStorage (web)', () => {
       isRunning: false,
       startedAt: null,
       scheduledNotificationId: null,
+      timerMode: 'focus',
+      pomodoroCycle: 1,
     });
   });
 

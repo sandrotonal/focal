@@ -4,6 +4,8 @@ import {
   playTickSound,
   playFocusStartSound,
   playFocusCompleteSound,
+  playBreakCompleteSound,
+  previewToneSound,
   playResetSound,
   cleanupAudioEngine,
 } from '../src/audio/soundEngine';
@@ -33,7 +35,11 @@ describe('Sound Engine', () => {
     expect(() => {
       playTickSound();
       playFocusStartSound();
-      playFocusCompleteSound();
+      playFocusCompleteSound('clarity');
+      playFocusCompleteSound('tibetan');
+      playFocusCompleteSound('mechanical');
+      playBreakCompleteSound();
+      previewToneSound('tibetan');
       playResetSound();
     }).not.toThrow();
   });
@@ -44,7 +50,11 @@ describe('Sound Engine', () => {
     expect(() => {
       playTickSound();
       playFocusStartSound();
-      playFocusCompleteSound();
+      playFocusCompleteSound('clarity');
+      playFocusCompleteSound('tibetan');
+      playFocusCompleteSound('mechanical');
+      playBreakCompleteSound();
+      previewToneSound('mechanical');
       playResetSound();
     }).not.toThrow();
   });

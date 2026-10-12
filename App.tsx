@@ -64,12 +64,23 @@ function FocusEngineScreen() {
     soundEnabled,
     completedSessions,
     totalFocusMinutes,
+    pomodoroEnabled,
+    pomodoroCycle,
+    pomodoroShortBreakMinutes,
+    pomodoroLongBreakMinutes,
+    soundAlertTone,
     handleChangeDurationUnit,
     handleThemeChange,
     handleToggleLanguage,
     handleToggleHaptics,
     handleToggleSound,
     handleNotificationsToggle,
+    handleTogglePomodoro,
+    handleSelectSoundTone,
+    setPomodoroCycle,
+    setPomodoroShortBreakMinutes,
+    setPomodoroLongBreakMinutes,
+    setPomodoroPreset,
     selectPreset,
     commitDuration,
     handleDurationDraftChange,
@@ -88,8 +99,11 @@ function FocusEngineScreen() {
     showCompletion,
     progress,
     elapsedText,
+    timerMode,
+    pomodoroCycle: currentTimerCycle,
     toggleTimer,
     resetTimer,
+    skipStage,
     dismissCompletion,
     scheduleCompletion,
     triggerImpact,
@@ -100,10 +114,73 @@ function FocusEngineScreen() {
     durationUnit,
     notificationsEnabled,
     hapticsEnabled,
+    soundAlertTone,
+    pomodoroEnabled,
+    pomodoroCycle,
+    pomodoroShortBreakMinutes,
+    pomodoroLongBreakMinutes,
     notificationTitle: t.notifications.title,
     notificationBody: t.notifications.body,
+    breakNotificationTitle: t.notifications.breakTitle,
+    breakNotificationBody: t.notifications.breakBody,
+    onPomodoroCycleChange: setPomodoroCycle,
     onSessionComplete: recordCompletedSession,
   });
+
+  const isBreak = timerMode === 'shortBreak' || timerMode === 'longBreak';
+
+  const stageLabel = useMemo(() => {
+    if (!pomodoroEnabled) return undefined;
+    if (timerMode === 'shortBreak') {
+      return `${t.mainTimer.stageShortBreak} // ${pomodoroShortBreakMinutes} ${t.common.minuteShort}`;
+    }
+    if (timerMode === 'longBreak') {
+      return `${t.mainTimer.stageLongBreak} // ${pomodoroLongBreakMinutes} ${t.common.minuteShort}`;
+    }
+    return `${t.mainTimer.stageFocus} // ${t.mainTimer.cycleBadge(currentTimerCycle, 4)}`;
+  }, [
+    currentTimerCycle,
+    pomodoroEnabled,
+    pomodoroLongBreakMinutes,
+    pomodoroShortBreakMinutes,
+    t,
+    timerMode,
+  ]);
+
+  const activeSubtitle = useMemo(() => {
+    if (pomodoroEnabled && timerMode === 'shortBreak') {
+      return `${pomodoroShortBreakMinutes} ${t.common.minuteShort}`;
+    }
+    if (pomodoroEnabled && timerMode === 'longBreak') {
+      return `${pomodoroLongBreakMinutes} ${t.common.minuteShort}`;
+    }
+    return durationUnit === 'seconds'
+      ? `${sessionSeconds} ${t.common.secondShort}`
+      : `${sessionMinutes} ${t.common.minuteShort}`;
+  }, [
+    durationUnit,
+    pomodoroEnabled,
+    pomodoroLongBreakMinutes,
+    pomodoroShortBreakMinutes,
+    sessionMinutes,
+    sessionSeconds,
+    t,
+    timerMode,
+  ]);
+
+  const completionTitle = useMemo(() => {
+    if (!pomodoroEnabled) return t.mainTimer.sessionCompleted;
+    if (timerMode === 'shortBreak') return t.notifications.pomodoroShortBreakTitle;
+    if (timerMode === 'longBreak') return t.notifications.pomodoroLongBreakTitle;
+    return t.notifications.breakTitle;
+  }, [pomodoroEnabled, t, timerMode]);
+
+  const completionBody = useMemo(() => {
+    if (!pomodoroEnabled) return t.mainTimer.sessionCompletedDesc;
+    if (timerMode === 'shortBreak') return t.notifications.pomodoroShortBreakBody;
+    if (timerMode === 'longBreak') return t.notifications.pomodoroLongBreakBody;
+    return t.notifications.breakBody;
+  }, [pomodoroEnabled, t, timerMode]);
 
   const translateY = useSharedValue(0);
   const gestureStartY = useSharedValue(0);
@@ -277,7 +354,7 @@ function FocusEngineScreen() {
               <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
             </View>
             <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>
-              {durationUnit === 'seconds' ? `${sessionSeconds} ${t.common.secondShort}` : `${sessionMinutes} ${t.common.minuteShort}`}
+              {activeSubtitle}
             </Text>
           </View>
         </View>
@@ -303,12 +380,30 @@ function FocusEngineScreen() {
               hairlineColor={colors.hairline}
               translateY={translateY}
               reducedMotion={Boolean(reduceMotion)}
+              stageLabel={stageLabel}
+              isBreak={isBreak}
             />
           </Animated.View>
         </GestureDetector>
 
         <View style={[styles.footer, { bottom: Math.max(insets.bottom + 26, 26) }]}>
           <Text style={[styles.hint, { color: colors.muted }]}>{t.mainTimer.tapToToggle}</Text>
+          {isBreak && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t.mainTimer.ariaSkipBreak}
+              onPress={skipStage}
+              style={({ pressed }) => [
+                styles.skipBreakButton,
+                { borderColor: colors.hairline, backgroundColor: colors.panel },
+                pressed && styles.itemPressed,
+              ]}
+            >
+              <Text style={[styles.skipBreakText, { color: colors.secondary }]}>
+                {t.mainTimer.skipBreak}
+              </Text>
+            </Pressable>
+          )}
           {(elapsed > 0 || showCompletion) && (
             <ModernResetButton
               onPress={resetTimer}
@@ -322,8 +417,8 @@ function FocusEngineScreen() {
 
         <AppleNotificationBanner
           visible={showCompletion}
-          title={t.mainTimer.sessionCompleted}
-          body={t.mainTimer.sessionCompletedDesc}
+          title={completionTitle}
+          body={completionBody}
           appName={t.common.appName || 'FOCAL'}
           timeText={t.mainTimer.now}
           actionText={t.mainTimer.newSession}
@@ -349,8 +444,12 @@ function FocusEngineScreen() {
           hapticsEnabled={hapticsEnabled}
           notificationsEnabled={notificationsEnabled}
           soundEnabled={soundEnabled}
+          pomodoroEnabled={pomodoroEnabled}
+          soundAlertTone={soundAlertTone}
           completedSessions={completedSessions}
           totalFocusMinutes={totalFocusMinutes}
+          pomodoroShortBreakMinutes={pomodoroShortBreakMinutes}
+          pomodoroLongBreakMinutes={pomodoroLongBreakMinutes}
           colors={colors}
           onClose={closeDrawer}
           onSelect={handleMenuSelect}
@@ -363,6 +462,11 @@ function FocusEngineScreen() {
           onToggleHaptics={handleToggleHaptics}
           onToggleNotifications={handleNotificationsToggleWrapper}
           onToggleSound={handleToggleSound}
+          onTogglePomodoro={handleTogglePomodoro}
+          onSelectPomodoroPreset={setPomodoroPreset}
+          onSelectShortBreak={setPomodoroShortBreakMinutes}
+          onSelectLongBreak={setPomodoroLongBreakMinutes}
+          onSelectSoundTone={handleSelectSoundTone}
         />
       </View>
     </GestureHandlerRootView>
@@ -457,6 +561,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     letterSpacing: 0.1,
+  },
+  skipBreakButton: {
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  skipBreakText: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  itemPressed: {
+    opacity: 0.6,
   },
   modernResetWrapper: {
     marginTop: 14,
