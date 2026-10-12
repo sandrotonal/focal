@@ -36,7 +36,7 @@ const SOUND_ASSETS: Record<
 > = {
   tick: require('../../assets/sounds/tick.wav'),
   focusStart: require('../../assets/sounds/focus_start.wav'),
-  focusComplete: require('../../assets/sounds/focus_complete.wav'),
+  focusComplete: require('../../assets/sounds/focus_complete_crystal.wav'),
   focusCompleteCrystal: require('../../assets/sounds/focus_complete_crystal.wav'),
   focusCompleteAurora: require('../../assets/sounds/focus_complete_aurora.wav'),
   focusCompleteTibetan: require('../../assets/sounds/focus_complete_tibetan.wav'),
@@ -47,6 +47,22 @@ const SOUND_ASSETS: Record<
 };
 
 type SoundKey = keyof typeof SOUND_ASSETS;
+
+function getToneSoundKey(tone: SoundAlertTone): SoundKey {
+  switch (tone) {
+    case 'aurora':
+      return 'focusCompleteAurora';
+    case 'tibetan':
+      return 'focusCompleteTibetan';
+    case 'clarity':
+      return 'focusCompleteClarity';
+    case 'mechanical':
+      return 'focusCompleteMechanical';
+    case 'crystal':
+    default:
+      return 'focusCompleteCrystal';
+  }
+}
 
 // Lazy native module loader to avoid crashing in unsupported environments
 let expoAudioModule: typeof import('expo-audio') | null = null;
@@ -125,29 +141,40 @@ function getOrCreatePlayer(audio: typeof import('expo-audio'), key: SoundKey): A
   }
 }
 
-// Preload native players eagerly in background
-export function preloadNativeSounds(): void {
+/**
+ * Preload only critical-path native players (tick pool, focus start, break, reset, and active tone).
+ * Secondary / preview tones are lazy-loaded on demand to preserve mobile decoder resources.
+ */
+export function preloadNativeSounds(activeTone: SoundAlertTone = 'crystal'): void {
   const audio = getExpoAudio();
   if (!audio) return;
   void ensureAudioMode(audio);
   getTickPlayer(audio);
-  const keys: SoundKey[] = [
+
+  const criticalKeys: SoundKey[] = [
     'focusStart',
-    'focusComplete',
-    'focusCompleteCrystal',
-    'focusCompleteAurora',
-    'focusCompleteTibetan',
-    'focusCompleteClarity',
-    'focusCompleteMechanical',
     'breakComplete',
     'reset',
+    getToneSoundKey(activeTone),
   ];
-  for (const key of keys) {
+
+  for (const key of criticalKeys) {
     getOrCreatePlayer(audio, key);
   }
 }
 
-// Initial eager preload on mobile devices (bypassed in test environment)
+/**
+ * Lazy preload for previewing or switching to secondary alert tones
+ */
+export function preloadToneSound(tone: SoundAlertTone): void {
+  const audio = getExpoAudio();
+  if (!audio) return;
+  void ensureAudioMode(audio);
+  const key = getToneSoundKey(tone);
+  getOrCreatePlayer(audio, key);
+}
+
+// Initial eager preload of core audio on mobile devices (bypassed in test environment)
 if (Platform.OS !== 'web' && process.env.NODE_ENV !== 'test') {
   setTimeout(() => {
     preloadNativeSounds();

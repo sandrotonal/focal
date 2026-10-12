@@ -99,11 +99,24 @@ Tüm 6 README vitrin ekran görüntüsü (Ritim Çarkı, Pomodoro Üçlüsü, Mi
 - AppleNotificationBanner bilesenine Dynamic Island tespiti (topInset >= 50) eklendi.
 - Ada altina oturan 28px kavisli ada formu ve ada genislemesini simule eden ust baglanti kapsulu eklendi.
 
+11. Cold Start Depolama Senkronizasyonu & Atomik Tercih Kuyrugu (Tamamlandi)
+- preferencesStorage.native.ts ve preferencesStorage.web.ts icerisine initPreferences baslaticisi eklendi.
+- usePreferences hook'unda isPreferencesLoaded yalanci dogrulugu kaldirildi; diskten okuma bitene kadar gercek yukleme kapisi kuruldu.
+- Read-modify-write yaris kosulunu onleyen bellek referansi ve sirali asenkron yazma kuyrugu (serial write queue) entegre edildi.
+- soundAlertTone union tipi validasyonuna 5 tonun tamami eklendi (crystal, aurora, clarity, tibetan, mechanical).
+
+12. Audio Core/Lazy Kaynak Yonetimi & Magaza Manifest Uyumu (Tamamlandi)
+- Acilista 12 AudioPlayer baslatilmasi engellendi; sadece kritik yol (tick havuzu, baslat, mola, sifirla ve aktif ton) onden yuklenir hale getirildi.
+- Diger tonlar (aurora, tibetan, clarity, mechanical) lazy-load mekanizmasina baglandi.
+- assets/sounds/ icindeki 264 KB mukerrer WAV dosyalari silindi, tekil kaynak referansi saglandi.
+- README MMKV rozeti gercek AsyncStorage + L1 Cache mimarisiyle esitlendi.
+- app.json icine iOS UIBackgroundModes: ["audio"] izni ve benzersiz com.sandrotonal.focal namespace'i tanimlandi.
+
 Benim Focal icin oncelik siralamasi
 Oncelik	Is	Durum
 1	Gercek cihaz performans testi	Yapilmali
 2	Timer/lifecycle edge-case testleri	Yapilmali
-3	Unit test altyapisi	Tamamlandi (22/22 Test)
+3	Unit test altyapisi	Tamamlandi (23/23 Test)
 4	App.tsx'i parcalama	Onerilir
 5	Buyuk asset optimizasyonu	Tamamlandi
 6	Accessibility gercek cihaz testi	Yapilmali
@@ -111,3 +124,5 @@ Oncelik	Is	Durum
 8	Yeni ozellikler	Ritim Carki & Pomodoro Eklendi
 9	Ses Tasarimi & Mobil Parite	Tamamlandi (Kristal, Kutup Isigi, Tibet)
 10	Apple Dynamic Island Banner	Tamamlandi
+11	Cold Start & Atomik Depolama	Tamamlandi
+12	Audio Lazy Loading & Manifest	Tamamlandi

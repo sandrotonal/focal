@@ -7,6 +7,8 @@ import {
   playBreakCompleteSound,
   previewToneSound,
   playResetSound,
+  preloadNativeSounds,
+  preloadToneSound,
   cleanupAudioEngine,
 } from '../src/audio/soundEngine';
 
@@ -60,6 +62,15 @@ describe('Sound Engine', () => {
       playBreakCompleteSound();
       previewToneSound('aurora');
       playResetSound();
+    }).not.toThrow();
+  });
+
+  test('should handle preloading functions without throwing', () => {
+    expect(() => {
+      preloadNativeSounds('crystal');
+      preloadNativeSounds('aurora');
+      preloadToneSound('tibetan');
+      preloadToneSound('mechanical');
     }).not.toThrow();
   });
 

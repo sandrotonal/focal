@@ -93,13 +93,21 @@ export function loadPreferences(): FocusPreferences {
         ? Math.min(120, Math.max(1, Math.round(parsed.pomodoroLongBreakMinutes)))
         : 15,
       soundAlertTone:
-        parsed.soundAlertTone === 'tibetan' || parsed.soundAlertTone === 'mechanical'
+        parsed.soundAlertTone === 'crystal' ||
+        parsed.soundAlertTone === 'aurora' ||
+        parsed.soundAlertTone === 'clarity' ||
+        parsed.soundAlertTone === 'tibetan' ||
+        parsed.soundAlertTone === 'mechanical'
           ? parsed.soundAlertTone
-          : 'clarity',
+          : defaults.soundAlertTone,
     };
   } catch {
     return defaults;
   }
+}
+
+export function initPreferences(): Promise<FocusPreferences> {
+  return Promise.resolve(loadPreferences());
 }
 
 export function savePreferences(preferences: FocusPreferences) {
