@@ -94,9 +94,15 @@ Focal is a high-performance, minimalist mobile productivity application engineer
 - Dynamic spring physics tuning: gentle entrance, snappy interruptible dismissal.
 - Worklet offloading executing gestures and perspective calculations directly on the native UI thread.
 
-#### 8. Cross-Platform Local Persistence
-- Fast key-value persistence with `react-native-mmkv` on iOS/Android and seamless asynchronous fallback on Web runtimes.
-- Preserves theme preferences, notification grants, audio states, and cumulative focus analytics across cold boots with backward-compatible legacy key migration.
+#### 9. Precision Option Wheel & Pomodoro Rhythm Engine
+- **Swiss Minimalist Rhythm Wheel:** Vertical wheel selector with Apple Aperture guidelines (`RhythmOptionWheel`), tactile tick sounds (`soundEngine`), and micro-haptic pulses (`expo-haptics`).
+- **Complete Pomodoro State Machine:** Automated progression between Focus, Short Break, and Long Break intervals, customizable interval durations, and cycle-aware state transitions.
+- **Resonance Alert Tones:** Three distinct acoustic finish profiles (Marimba, Zen Bell, Crystal) and dedicated break completion chimes.
+- **Pure Typographic Balance:** Frameless metric triad strictly adhering to Dieter Rams principles with zero emoji distractions.
+
+#### 10. Modular Architecture & shadcn Structure
+- Independent custom hooks (`useFocusTimer`, `usePreferences`) separating domain business logic from view rendering.
+- Extensible `/components/ui` component topology following shadcn and Atomic Design standards with `@/*` path mapping.
 
 ---
 
@@ -109,29 +115,37 @@ focal/
 │   ├── icon.png               # Square 1024x1024 app store icon on #111215 obsidian
 │   ├── android-icon-foreground.png # Android adaptive icon foreground
 │   ├── favicon.png            # Web favicon
+│   ├── sounds/                # Master wav audio assets (chimes, ticks, bowls)
 │   └── screenshots/           # High-resolution application captures
 ├── src/
 │   ├── audio/
-│   │   └── soundEngine.ts     # Procedural harmonic sound engine
+│   │   └── soundEngine.ts     # Multi-player acoustic sound engine & web synthesizer
 │   ├── components/
-│   │   ├── onboarding/
-│   │   │   ├── AmbientGlow.tsx        # Ambient spatial lighting layer
-│   │   │   ├── Artwork3D.tsx          # 3D gyro and sensory control stages
-│   │   │   ├── OnboardingScreen.tsx   # Master onboarding coordinator
-│   │   │   ├── OnboardingSlide3D.tsx  # 3D perspective worklet container
-│   │   │   └── types.ts               # Strict TypeScript interface contracts
+│   │   ├── onboarding/        # 3D Gyro onboarding carousel
 │   │   ├── ui/
 │   │   │   ├── AppleNotificationBanner.tsx # Native iOS-style banner notification
 │   │   │   ├── ModernResetButton.tsx       # Fluid interactive reset trigger
-│   │   │   └── ModernSwitch.tsx            # Custom animated SVG toggle
+│   │   │   ├── ModernSwitch.tsx            # Custom animated SVG toggle
+│   │   │   ├── RhythmOptionWheel.tsx       # Apple aperture precision rhythm wheel
+│   │   │   ├── option-wheel.tsx            # 3D cylindrical web option wheel
+│   │   │   └── demo.tsx                    # Component showcase demo
+│   │   ├── FocusDrawer.tsx    # Slide-over control drawer & cadence panel
 │   │   ├── LineSidebar.tsx    # Left-edge vertical navigation indicator
 │   │   └── MainFocus3D.tsx    # Kinetic core chronometer
+│   ├── hooks/
+│   │   ├── useFocusTimer.ts   # Core focus timer & Pomodoro state machine
+│   │   └── usePreferences.ts  # Localized settings and persistent storage sync
 │   ├── i18n/
 │   │   └── translations.ts    # Bi-lingual English / Turkish translation dictionary
-│   ├── notifications/         # Multi-platform notification scheduler
-│   └── storage/               # MMKV and Web local persistence drivers
-├── App.tsx                    # Root application entry & state machine
-└── package.json
+│   ├── lib/
+│   │   └── utils.ts           # Class merge and style utilities
+│   ├── notifications/         # Multi-platform notification scheduler (native & web)
+│   ├── storage/               # MMKV and Web local persistence drivers
+│   └── theme/
+│       └── colors.ts          # Apple dark mode surface hierarchy tokens
+├── App.tsx                    # Root application entry & coordinator
+├── package.json
+└── tsconfig.json
 ```
 
 ---
@@ -168,6 +182,9 @@ npx tsc --noEmit
 
 # Code analysis and linting
 npx expo lint
+
+# Automated test suite
+npm test
 ```
 
 ---

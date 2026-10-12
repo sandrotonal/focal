@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import {
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,8 +18,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineSidebar } from './LineSidebar';
 import { ModernSwitch } from './ui/ModernSwitch';
+import { RhythmOptionWheel, type RhythmPreset } from './ui/RhythmOptionWheel';
+import Svg, { Path } from 'react-native-svg';
 import { translations, Language } from '../i18n/translations';
-import type { DurationUnit, ThemeMode } from '../storage/preferencesStorage';
+import type { DurationUnit, SoundAlertTone, ThemeMode } from '../storage/preferencesStorage';
 import type { AppColors } from '../theme/colors';
 
 const SESSION_OPTIONS_MINUTES = [15, 25, 45, 60];
@@ -42,6 +45,11 @@ export type FocusDrawerProps = {
   hapticsEnabled: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
+  pomodoroEnabled: boolean;
+  pomodoroCycle?: number;
+  pomodoroShortBreakMinutes?: number;
+  pomodoroLongBreakMinutes?: number;
+  soundAlertTone: SoundAlertTone;
   completedSessions: number;
   totalFocusMinutes: number;
   colors: AppColors;
@@ -56,6 +64,11 @@ export type FocusDrawerProps = {
   onToggleHaptics: () => void;
   onToggleNotifications: () => void;
   onToggleSound: () => void;
+  onTogglePomodoro: () => void;
+  onSelectPomodoroPreset?: (focus: number, shortM: number, longM: number) => void;
+  onSelectShortBreak?: (mins: number) => void;
+  onSelectLongBreak?: (mins: number) => void;
+  onSelectSoundTone: (tone: SoundAlertTone) => void;
 };
 
 export const FocusDrawer = React.memo(function FocusDrawer({
@@ -71,6 +84,10 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   hapticsEnabled,
   notificationsEnabled,
   soundEnabled,
+  pomodoroEnabled,
+  pomodoroShortBreakMinutes = 5,
+  pomodoroLongBreakMinutes = 15,
+  soundAlertTone,
   colors,
   onClose,
   onSelect,
@@ -83,6 +100,11 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   onToggleHaptics,
   onToggleNotifications,
   onToggleSound,
+  onTogglePomodoro,
+  onSelectPomodoroPreset,
+  onSelectShortBreak,
+  onSelectLongBreak,
+  onSelectSoundTone,
   completedSessions,
   totalFocusMinutes,
 }: FocusDrawerProps) {
@@ -94,6 +116,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
     () => [
       t.drawer.menu.focus,
       t.drawer.menu.duration,
+      t.drawer.menu.pomodoro,
       t.drawer.menu.theme,
       t.drawer.menu.notifications,
       t.drawer.menu.haptics,
@@ -128,6 +151,62 @@ export const FocusDrawer = React.memo(function FocusDrawer({
 
   const weekDayLabels = WEEKDAY_LABELS[language] ?? WEEKDAY_LABELS.en;
 
+  const rhythmPresets: RhythmPreset[] = useMemo(
+    () => [
+      {
+        id: 'sprint',
+        name: t.drawer.sections.pomodoroPlan.presetSprint,
+        ratio: '15 / 3',
+        focus: 15,
+        shortM: 3,
+        longM: 10,
+      },
+      {
+        id: 'standard',
+        name: t.drawer.sections.pomodoroPlan.presetStandard,
+        ratio: '25 / 5',
+        focus: 25,
+        shortM: 5,
+        longM: 15,
+      },
+      {
+        id: 'expanded',
+        name: language === 'tr' ? 'Geniş' : 'Expanded',
+        ratio: '45 / 10',
+        focus: 45,
+        shortM: 10,
+        longM: 20,
+      },
+      {
+        id: 'deep',
+        name: t.drawer.sections.pomodoroPlan.presetDeep,
+        ratio: '50 / 10',
+        focus: 50,
+        shortM: 10,
+        longM: 20,
+      },
+      {
+        id: 'ultra',
+        name: 'Ultra',
+        ratio: '60 / 15',
+        focus: 60,
+        shortM: 15,
+        longM: 25,
+      },
+    ],
+    [t, language]
+  );
+
+  const activePresetId = useMemo(() => {
+    const matched = rhythmPresets.find(
+      (p) =>
+        p.focus === sessionMinutes &&
+        p.shortM === pomodoroShortBreakMinutes &&
+        p.longM === pomodoroLongBreakMinutes
+    );
+    return matched?.id ?? '';
+  }, [rhythmPresets, sessionMinutes, pomodoroShortBreakMinutes, pomodoroLongBreakMinutes]);
+
   return (
     <>
       <Animated.View
@@ -149,7 +228,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
         aria-hidden={!visible}
         style={[styles.drawer, { width: drawerWidth, backgroundColor: colors.panel }, drawerStyle]}
       >
-        <View style={[styles.drawerContent, { paddingTop: insets.top + 22, paddingBottom: insets.bottom + 22 }]}>
+        <View style={[styles.drawerContent, { paddingTop: insets.top + 22 }]}>
           <View style={styles.drawerHeader}>
             <View style={styles.drawerBrand}>
               <Image
@@ -173,12 +252,21 @@ export const FocusDrawer = React.memo(function FocusDrawer({
             </Pressable>
           </View>
 
-          <LineSidebar
-            items={menuItems}
-            activeIndex={activeIndex}
-            onSelect={onSelect}
-            colors={colors}
-          />
+          <ScrollView
+            style={styles.drawerScrollView}
+            contentContainerStyle={[
+              styles.drawerScrollContent,
+              { paddingBottom: insets.bottom + 48 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+          >
+            <LineSidebar
+              items={menuItems}
+              activeIndex={activeIndex}
+              onSelect={onSelect}
+              colors={colors}
+            />
 
           {activeIndex === 0 && (
             <View style={styles.drawerSummary}>
@@ -326,6 +414,191 @@ export const FocusDrawer = React.memo(function FocusDrawer({
 
           {activeIndex === 2 && (
             <View style={styles.drawerSection}>
+              {/* Pomodoro Rhythm Mode Toggle */}
+              <Pressable
+                accessible
+                accessibilityRole="switch"
+                accessibilityState={{ checked: pomodoroEnabled }}
+                accessibilityLabel={t.drawer.aria.pomodoroSwitch}
+                onPress={onTogglePomodoro}
+                style={({ pressed }) => [
+                  styles.settingRow,
+                  { borderBottomColor: colors.hairline, marginTop: 4 },
+                  pressed && styles.itemPressed,
+                ]}
+              >
+                <View style={styles.settingTextGroup}>
+                  <Text style={[styles.settingValue, { color: colors.primary }]}>
+                    {t.drawer.sections.pomodoroTitle}
+                  </Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                    {t.drawer.sections.pomodoroSubtitle}
+                  </Text>
+                </View>
+                <View pointerEvents="none">
+                  <ModernSwitch
+                    value={pomodoroEnabled}
+                    onValueChange={() => {}}
+                    checkedBg={colors.accent}
+                    uncheckedBg={colors.hairline}
+                    crossColor={colors.muted}
+                    checkmarkColor="#FFFFFF"
+                    accessibilityLabel={t.drawer.aria.pomodoroSwitch}
+                  />
+                </View>
+              </Pressable>
+
+              {/* Pomodoro Frameless Rhythm Configuration (Apple Pro Minimalist) */}
+              {pomodoroEnabled && (
+                <View style={styles.pomodoroFramelessContainer}>
+                  {/* Rhythm Cadence Summary Block (Swiss Minimalist Metric Triad) */}
+                  <View style={[styles.rhythmCadenceRow, { borderBottomColor: colors.hairline }]}>
+                    <View style={styles.rhythmCadenceCol}>
+                      <Text style={[styles.rhythmCadenceLabel, { color: colors.muted }]}>
+                        {t.drawer.sections.pomodoroPlan.focusLabel}
+                      </Text>
+                      <View style={styles.rhythmValueInline}>
+                        <Text style={[styles.rhythmCadenceNumber, { color: colors.primary }]}>
+                          {sessionMinutes}
+                        </Text>
+                        <Text style={[styles.rhythmCadenceUnit, { color: colors.secondary }]}>
+                          {t.common.minuteShort}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.rhythmCadenceDivider, { backgroundColor: colors.hairline }]} />
+
+                    <View style={styles.rhythmCadenceCol}>
+                      <Text style={[styles.rhythmCadenceLabel, { color: colors.muted }]}>
+                        {t.drawer.sections.pomodoroPlan.shortBreakLabel}
+                      </Text>
+                      <View style={styles.rhythmValueInline}>
+                        <Text style={[styles.rhythmCadenceNumber, { color: colors.accent }]}>
+                          {pomodoroShortBreakMinutes}
+                        </Text>
+                        <Text style={[styles.rhythmCadenceUnit, { color: colors.secondary }]}>
+                          {t.common.minuteShort}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.rhythmCadenceDivider, { backgroundColor: colors.hairline }]} />
+
+                    <View style={styles.rhythmCadenceCol}>
+                      <Text style={[styles.rhythmCadenceLabel, { color: colors.muted }]}>
+                        {t.drawer.sections.pomodoroPlan.longBreakLabel}
+                      </Text>
+                      <View style={styles.rhythmValueInline}>
+                        <Text style={[styles.rhythmCadenceNumber, { color: colors.primary }]}>
+                          {pomodoroLongBreakMinutes}
+                        </Text>
+                        <Text style={[styles.rhythmCadenceUnit, { color: colors.secondary }]}>
+                          {t.common.minuteShort}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Interactive Rhythm Option Wheel (Apple Aperture Tuner) */}
+                  <RhythmOptionWheel
+                    presets={rhythmPresets}
+                    selectedPresetId={activePresetId}
+                    onSelect={(preset) =>
+                      onSelectPomodoroPreset?.(preset.focus, preset.shortM, preset.longM)
+                    }
+                    colors={colors}
+                  />
+
+                  {/* Short Break Setting Row */}
+                  <View style={[styles.settingRow, { borderBottomColor: colors.hairline }]}>
+                    <View style={styles.settingTextGroup}>
+                      <Text style={[styles.settingValue, { color: colors.primary }]}>
+                        {t.drawer.sections.pomodoroPlan.shortBreakSelect}
+                      </Text>
+                      <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                        {language === 'tr' ? 'Seanslar arası dinlenme' : 'Interval rest'}
+                      </Text>
+                    </View>
+                    <View style={styles.inlinePresetPillRow}>
+                      {[3, 5, 10].map((mins) => {
+                        const isSel = pomodoroShortBreakMinutes === mins;
+                        return (
+                          <Pressable
+                            key={mins}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mins} ${t.common.minuteShort}`}
+                            onPress={() => onSelectShortBreak?.(mins)}
+                            style={({ pressed }) => [
+                              styles.inlineUnderlinePreset,
+                              { borderBottomColor: isSel ? colors.accent : colors.hairline },
+                              pressed && styles.itemPressed,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.inlineUnderlinePresetText,
+                                { color: isSel ? colors.primary : colors.muted },
+                              ]}
+                            >
+                              {mins}m
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Long Break Setting Row */}
+                  <View style={[styles.settingRow, { borderBottomColor: colors.hairline }]}>
+                    <View style={styles.settingTextGroup}>
+                      <Text style={[styles.settingValue, { color: colors.primary }]}>
+                        {t.drawer.sections.pomodoroPlan.longBreakSelect}
+                      </Text>
+                      <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                        {language === 'tr' ? '4 seans sonrası uzun dinlenme' : 'Rest after 4 cycles'}
+                      </Text>
+                    </View>
+                    <View style={styles.inlinePresetPillRow}>
+                      {[10, 15, 20].map((mins) => {
+                        const isSel = pomodoroLongBreakMinutes === mins;
+                        return (
+                          <Pressable
+                            key={mins}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${mins} ${t.common.minuteShort}`}
+                            onPress={() => onSelectLongBreak?.(mins)}
+                            style={({ pressed }) => [
+                              styles.inlineUnderlinePreset,
+                              { borderBottomColor: isSel ? colors.accent : colors.hairline },
+                              pressed && styles.itemPressed,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.inlineUnderlinePresetText,
+                                { color: isSel ? colors.primary : colors.muted },
+                              ]}
+                            >
+                              {mins}m
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Rhythm Footnote */}
+                  <Text style={[styles.rhythmFootnote, { color: colors.muted }]}>
+                    {t.drawer.sections.pomodoroPlan.cycleExplanation(4, pomodoroLongBreakMinutes)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {activeIndex === 3 && (
+            <View style={styles.drawerSection}>
               <Pressable
                 accessible
                 accessibilityRole="switch"
@@ -361,7 +634,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
             </View>
           )}
 
-          {activeIndex === 3 && (
+          {activeIndex === 4 && (
             <View style={styles.drawerSection}>
               <Pressable
                 accessible
@@ -394,7 +667,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
             </View>
           )}
 
-          {activeIndex === 4 && (
+          {activeIndex === 5 && (
             <View style={styles.drawerSection}>
               <Pressable
                 accessible
@@ -427,7 +700,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
             </View>
           )}
 
-          {activeIndex === 5 && (
+          {activeIndex === 6 && (
             <View style={styles.drawerSection}>
               <Pressable
                 accessible
@@ -457,10 +730,76 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                   />
                 </View>
               </Pressable>
+
+              {/* Sound Palette Selector (Apple iOS Settings Clean List) */}
+              {soundEnabled && (
+                <View style={styles.toneSectionContainer}>
+                  <View style={styles.toneSectionHeaderRow}>
+                    <Text style={[styles.toneSectionHeader, { color: colors.muted }]}>
+                      {t.drawer.sections.soundAlertTone.toUpperCase()}
+                    </Text>
+                    <Text style={[styles.toneSectionSubheader, { color: colors.muted }]}>
+                      {t.drawer.sections.soundAlertToneSubtitle}
+                    </Text>
+                  </View>
+
+                  {(['clarity', 'tibetan', 'mechanical'] as const).map((toneKey) => {
+                    const isSelected = soundAlertTone === toneKey;
+                    const label = t.drawer.sections.soundTones[toneKey];
+                    const subtitle = t.drawer.sections.soundToneSubtitles[toneKey];
+                    return (
+                      <Pressable
+                        key={toneKey}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${label} ${t.drawer.aria.soundToneSelect}`}
+                        onPress={() => onSelectSoundTone(toneKey)}
+                        style={({ pressed }) => [
+                          styles.settingRow,
+                          { borderBottomColor: colors.hairline },
+                          pressed && styles.itemPressed,
+                        ]}
+                      >
+                        <View style={styles.settingTextGroup}>
+                          <Text
+                            style={[
+                              styles.settingValue,
+                              {
+                                color: isSelected ? colors.primary : colors.secondary,
+                                fontWeight: isSelected ? '600' : '400',
+                              },
+                            ]}
+                          >
+                            {label}
+                          </Text>
+                          <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                            {subtitle}
+                          </Text>
+                        </View>
+
+                        {isSelected ? (
+                          <View style={styles.toneCheckmarkWrapper}>
+                            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                              <Path
+                                d="M5 13l4 4L19 7"
+                                stroke={colors.accent}
+                                strokeWidth={2.4}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </Svg>
+                          </View>
+                        ) : (
+                          <View style={styles.toneCheckmarkPlaceholder} />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
 
-          {activeIndex === 6 && (
+          {activeIndex === 7 && (
             <View style={styles.drawerSection}>
               <Pressable
                 accessible
@@ -496,6 +835,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
               </Pressable>
             </View>
           )}
+          </ScrollView>
         </View>
       </Animated.View>
     </>
@@ -518,6 +858,12 @@ const styles = StyleSheet.create({
   drawerContent: {
     flex: 1,
     paddingHorizontal: 24,
+  },
+  drawerScrollView: {
+    flex: 1,
+  },
+  drawerScrollContent: {
+    flexGrow: 1,
   },
   drawerHeader: {
     flexDirection: 'row',
@@ -712,5 +1058,132 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
     fontSize: 14,
     fontWeight: '500',
+  },
+  pomodoroFramelessContainer: {
+    marginTop: 8,
+  },
+  rhythmCadenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    marginTop: 8,
+  },
+  rhythmCadenceCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rhythmCadenceLabel: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  rhythmValueInline: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+  },
+  rhythmCadenceNumber: {
+    fontFamily: 'System',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+  },
+  rhythmCadenceUnit: {
+    fontFamily: 'System',
+    fontSize: 13,
+    fontWeight: '400',
+    letterSpacing: 0,
+  },
+  rhythmCadenceDivider: {
+    width: 1,
+    height: 34,
+  },
+  framelessRhythmRow: {
+    flexDirection: 'row',
+    marginTop: 18,
+    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  framelessRhythmCol: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  framelessRhythmRatio: {
+    fontFamily: 'System',
+    fontSize: 18,
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  framelessRhythmName: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  framelessRhythmIndicator: {
+    width: 24,
+    height: 2,
+    borderRadius: 1,
+  },
+  inlinePresetPillRow: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  inlineUnderlinePreset: {
+    minWidth: 32,
+    paddingBottom: 4,
+    borderBottomWidth: 1.5,
+    alignItems: 'center',
+  },
+  inlineUnderlinePresetText: {
+    fontFamily: 'System',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  rhythmFootnote: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '400',
+    letterSpacing: 0.1,
+    marginTop: 12,
+    lineHeight: 16,
+  },
+  toneSectionContainer: {
+    marginTop: 18,
+  },
+  toneSectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  toneSectionHeader: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  toneSectionSubheader: {
+    fontFamily: 'System',
+    fontSize: 11,
+    fontWeight: '400',
+  },
+  toneCheckmarkWrapper: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toneCheckmarkPlaceholder: {
+    width: 28,
+    height: 28,
   },
 });

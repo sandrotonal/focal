@@ -106,8 +106,15 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
     if (hapticsEnabled) {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    translateY.value = withTiming(-200, { duration: 160 });
+    opacity.value = withTiming(0, { duration: 140 }, (finished) => {
+      if (finished) {
+        runOnJS(setIsRendered)(false);
+      }
+    });
     onAction();
-  }, [hapticsEnabled, onAction]);
+    onDismiss();
+  }, [hapticsEnabled, onAction, onDismiss, opacity, translateY]);
 
   const handleDismiss = useCallback(() => {
     if (hapticsEnabled) {

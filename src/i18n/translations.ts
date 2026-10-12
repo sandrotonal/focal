@@ -20,6 +20,7 @@ export interface TranslationSchema {
     menu: {
       focus: string;
       duration: string;
+      pomodoro: string;
       theme: string;
       notifications: string;
       haptics: string;
@@ -44,6 +45,33 @@ export interface TranslationSchema {
       hapticsSubtitle: string;
       soundTitle: string;
       soundSubtitle: string;
+      pomodoroTitle: string;
+      pomodoroSubtitle: string;
+      soundAlertTone: string;
+      soundAlertToneSubtitle: string;
+      soundTones: {
+        clarity: string;
+        tibetan: string;
+        mechanical: string;
+      };
+      soundToneSubtitles: {
+        clarity: string;
+        tibetan: string;
+        mechanical: string;
+      };
+      pomodoroPlan: {
+        title: string;
+        focusLabel: string;
+        shortBreakLabel: string;
+        longBreakLabel: string;
+        cycleExplanation: (cycles: number, longBreakMinutes: number) => string;
+        presetsTitle: string;
+        presetStandard: string;
+        presetDeep: string;
+        presetSprint: string;
+        shortBreakSelect: string;
+        longBreakSelect: string;
+      };
       languageTitle: string;
       languageSubtitle: string;
     };
@@ -56,14 +84,21 @@ export interface TranslationSchema {
       notificationsSwitch: string;
       hapticsSwitch: string;
       soundSwitch: string;
+      pomodoroSwitch: string;
+      soundToneSelect: string;
       languageSwitch: string;
     };
   };
   mainTimer: {
     focus: string;
+    stageFocus: string;
+    stageShortBreak: string;
+    stageLongBreak: string;
+    cycleBadge: (cycle: number, max?: number) => string;
     tapToToggle: string;
     pullToReset: string;
     releaseToReset: string;
+    skipBreak: string;
     sessionCompleted: string;
     sessionCompletedDesc: string;
     completedSessions: (count: number) => string;
@@ -73,6 +108,7 @@ export interface TranslationSchema {
     dismiss: string;
     ariaStart: string;
     ariaPause: string;
+    ariaSkipBreak: string;
     ariaMenuOpen: string;
     ariaMenuClose: string;
     ariaNewSession: string;
@@ -110,6 +146,12 @@ export interface TranslationSchema {
   notifications: {
     title: string;
     body: string;
+    breakTitle: string;
+    breakBody: string;
+    pomodoroShortBreakTitle: string;
+    pomodoroShortBreakBody: string;
+    pomodoroLongBreakTitle: string;
+    pomodoroLongBreakBody: string;
   };
 }
 
@@ -134,6 +176,7 @@ export const translations: Record<Language, TranslationSchema> = {
       menu: {
         focus: 'Odak',
         duration: 'Süre',
+        pomodoro: 'Pomodoro',
         theme: 'Tema',
         notifications: 'Bildirim',
         haptics: 'Haptik',
@@ -158,6 +201,34 @@ export const translations: Record<Language, TranslationSchema> = {
         hapticsSubtitle: 'Dokunsal fiziksel geri bildirim',
         soundTitle: 'Akustik Efektler',
         soundSubtitle: '528Hz & 432Hz odak ve mekanik tonlar',
+        pomodoroTitle: 'Pomodoro Ritmi',
+        pomodoroSubtitle: '25 dk odak · 5 dk mola · 4 döngü',
+        soundAlertTone: 'Bitiş Tonu',
+        soundAlertToneSubtitle: 'Rezonans karakteri',
+        soundTones: {
+          clarity: 'Marimba',
+          tibetan: 'Zen Çanı',
+          mechanical: 'Kristal',
+        },
+        soundToneSubtitles: {
+          clarity: 'Sıcak ahşap akoru',
+          tibetan: 'Huzurlu meditasyon kasesi',
+          mechanical: 'Berrak hava ışıltısı',
+        },
+        pomodoroPlan: {
+          title: 'RİTİM PLANI',
+          focusLabel: 'ODAK',
+          shortBreakLabel: 'KISA MOLA',
+          longBreakLabel: 'UZUN MOLA',
+          cycleExplanation: (cycles: number, longBreakMinutes: number) =>
+            `${cycles} odak seansı sonrası ${longBreakMinutes} dk uzun mola verilir`,
+          presetsTitle: 'Hazır Ritimler',
+          presetStandard: 'Standart',
+          presetDeep: 'Derin',
+          presetSprint: 'Sprint',
+          shortBreakSelect: 'Kısa Mola',
+          longBreakSelect: 'Uzun Mola',
+        },
         languageTitle: 'Arayüz Dili',
         languageSubtitle: 'Türkçe (TR) / English (EN)',
       },
@@ -170,14 +241,21 @@ export const translations: Record<Language, TranslationSchema> = {
         notificationsSwitch: 'Bitiş bildirimi anahtarı',
         hapticsSwitch: 'Haptik titreşim anahtarı',
         soundSwitch: 'Akustik ses efektleri anahtarı',
+        pomodoroSwitch: 'Pomodoro ritmi anahtarı',
+        soundToneSelect: 'Uyarı tonu seçimi',
         languageSwitch: 'Arayüz dili değiştirme anahtarı',
       },
     },
     mainTimer: {
-      focus: 'Focus',
+      focus: 'Odak',
+      stageFocus: 'ODAK',
+      stageShortBreak: 'KISA MOLA',
+      stageLongBreak: 'UZUN MOLA',
+      cycleBadge: (cycle: number, max: number = 4) => `DÖNGÜ ${cycle}/${max}`,
       tapToToggle: 'Dokunarak başlat / durdur',
       pullToReset: 'Seansı sıfırlamak için aşağı çek',
       releaseToReset: 'Bırak ve Sıfırla',
+      skipBreak: 'Molayı Geç',
       sessionCompleted: 'Seans tamamlandı',
       sessionCompletedDesc: 'Hedeflenen odak süresine ulaştın.',
       completedSessions: (count: number) => `Tamamlanan: ${count} seans`,
@@ -187,6 +265,7 @@ export const translations: Record<Language, TranslationSchema> = {
       dismiss: 'Kapat',
       ariaStart: 'Odaklanma sayacını başlat',
       ariaPause: 'Odaklanma sayacını duraklat',
+      ariaSkipBreak: 'Molayı atla ve yeni seansa geç',
       ariaMenuOpen: 'Menüyü aç',
       ariaMenuClose: 'Menüyü kapat',
       ariaNewSession: 'Yeni oturum başlat',
@@ -224,6 +303,12 @@ export const translations: Record<Language, TranslationSchema> = {
     notifications: {
       title: 'Odak Seansı Tamamlandı',
       body: 'Hedeflenen odak süresine ulaştın. Zihnini dinlendirmek için kısa bir mola verebilirsin.',
+      breakTitle: 'Mola Tamamlandı',
+      breakBody: 'Zihnini tazeledin. Yeni odak seansına hazırsın.',
+      pomodoroShortBreakTitle: 'Odak Seansı Tamamlandı',
+      pomodoroShortBreakBody: 'Tebrikler! 5 dakikalık kısa dinlenme zamanı.',
+      pomodoroLongBreakTitle: '4 Odak Seansı Tamamlandı',
+      pomodoroLongBreakBody: 'Mükemmel disiplin! 15 dakikalık uzun mola zamanı.',
     },
   },
   en: {
@@ -246,6 +331,7 @@ export const translations: Record<Language, TranslationSchema> = {
       menu: {
         focus: 'Focus',
         duration: 'Duration',
+        pomodoro: 'Pomodoro',
         theme: 'Theme',
         notifications: 'Notification',
         haptics: 'Haptics',
@@ -270,6 +356,34 @@ export const translations: Record<Language, TranslationSchema> = {
         hapticsSubtitle: 'Tactile physical feedback',
         soundTitle: 'Acoustic Effects',
         soundSubtitle: '528Hz & 432Hz focus and mechanical tones',
+        pomodoroTitle: 'Pomodoro Rhythm',
+        pomodoroSubtitle: '25m focus · 5m break · 4 cycles',
+        soundAlertTone: 'Alert Tone',
+        soundAlertToneSubtitle: 'Resonance character',
+        soundTones: {
+          clarity: 'Marimba',
+          tibetan: 'Zen Bell',
+          mechanical: 'Crystal',
+        },
+        soundToneSubtitles: {
+          clarity: 'Warm wood triad',
+          tibetan: 'Mindful singing bowl',
+          mechanical: 'Airy crystal shimmer',
+        },
+        pomodoroPlan: {
+          title: 'RHYTHM PLAN',
+          focusLabel: 'FOCUS',
+          shortBreakLabel: 'SHORT BREAK',
+          longBreakLabel: 'LONG BREAK',
+          cycleExplanation: (cycles: number, longBreakMinutes: number) =>
+            `${cycles} focus sessions followed by a ${longBreakMinutes}m long break`,
+          presetsTitle: 'Rhythm Presets',
+          presetStandard: 'Standard',
+          presetDeep: 'Deep',
+          presetSprint: 'Sprint',
+          shortBreakSelect: 'Short Break',
+          longBreakSelect: 'Long Break',
+        },
         languageTitle: 'Interface Language',
         languageSubtitle: 'English (EN) / Türkçe (TR)',
       },
@@ -282,14 +396,21 @@ export const translations: Record<Language, TranslationSchema> = {
         notificationsSwitch: 'Completion notification toggle',
         hapticsSwitch: 'Haptic feedback toggle',
         soundSwitch: 'Acoustic effects toggle',
+        pomodoroSwitch: 'Pomodoro rhythm toggle',
+        soundToneSelect: 'Alert tone selector',
         languageSwitch: 'Interface language toggle',
       },
     },
     mainTimer: {
       focus: 'Focus',
+      stageFocus: 'FOCUS',
+      stageShortBreak: 'SHORT BREAK',
+      stageLongBreak: 'LONG BREAK',
+      cycleBadge: (cycle: number, max: number = 4) => `CYCLE ${cycle}/${max}`,
       tapToToggle: 'Tap to start / pause',
       pullToReset: 'Pull down to reset session',
       releaseToReset: 'Release to Reset',
+      skipBreak: 'Skip Break',
       sessionCompleted: 'Session completed',
       sessionCompletedDesc: 'Target focus duration reached.',
       completedSessions: (count: number) => `Completed: ${count} sessions`,
@@ -299,6 +420,7 @@ export const translations: Record<Language, TranslationSchema> = {
       dismiss: 'Dismiss',
       ariaStart: 'Start focus timer',
       ariaPause: 'Pause focus timer',
+      ariaSkipBreak: 'Skip break and proceed to next session',
       ariaMenuOpen: 'Open menu',
       ariaMenuClose: 'Close menu',
       ariaNewSession: 'Start new session',
@@ -336,6 +458,12 @@ export const translations: Record<Language, TranslationSchema> = {
     notifications: {
       title: 'Focus Session Completed',
       body: 'Target focus duration reached. Take a short mindful break to recharge.',
+      breakTitle: 'Break Completed',
+      breakBody: 'Mind recharged. Ready for the next focus session.',
+      pomodoroShortBreakTitle: 'Focus Session Completed',
+      pomodoroShortBreakBody: 'Well done! Time for a 5-minute mindful break.',
+      pomodoroLongBreakTitle: '4 Focus Sessions Completed',
+      pomodoroLongBreakBody: 'Superb discipline! Time for a 15-minute long break.',
     },
   },
 };

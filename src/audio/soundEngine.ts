@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { AudioPlayer } from 'expo-audio';
+import type { SoundAlertTone } from '../storage/preferencesStorage';
 
 type WebAudioWindow = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
@@ -20,10 +21,22 @@ export function getSoundEnabled(): boolean {
 }
 
 // Sound assets for native audio playback
-const SOUND_ASSETS: Record<'tick' | 'focusStart' | 'focusComplete' | 'reset', number> = {
+const SOUND_ASSETS: Record<
+  | 'tick'
+  | 'focusStart'
+  | 'focusComplete'
+  | 'focusCompleteTibetan'
+  | 'focusCompleteMechanical'
+  | 'breakComplete'
+  | 'reset',
+  number
+> = {
   tick: require('../../assets/sounds/tick.wav'),
   focusStart: require('../../assets/sounds/focus_start.wav'),
   focusComplete: require('../../assets/sounds/focus_complete.wav'),
+  focusCompleteTibetan: require('../../assets/sounds/focus_complete_tibetan.wav'),
+  focusCompleteMechanical: require('../../assets/sounds/focus_complete_mechanical.wav'),
+  breakComplete: require('../../assets/sounds/break_complete.wav'),
   reset: require('../../assets/sounds/reset.wav'),
 };
 
@@ -111,7 +124,14 @@ export function preloadNativeSounds(): void {
   if (!audio) return;
   void ensureAudioMode(audio);
   getTickPlayer(audio);
-  const keys: SoundKey[] = ['focusStart', 'focusComplete', 'reset'];
+  const keys: SoundKey[] = [
+    'focusStart',
+    'focusComplete',
+    'focusCompleteTibetan',
+    'focusCompleteMechanical',
+    'breakComplete',
+    'reset',
+  ];
   for (const key of keys) {
     getOrCreatePlayer(audio, key);
   }
@@ -255,48 +275,157 @@ function playWebFocusStart(): void {
   }
 }
 
-function playWebFocusComplete(): void {
+function playWebClarity(): void {
+  try {
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Friendly Apple-style rosewood marimba triad: E5, G#5, B5
+    const notes = [
+      { freq: 659.25, time: now, gain: 0.16 },
+      { freq: 830.61, time: now + 0.08, gain: 0.15 },
+      { freq: 987.77, time: now + 0.16, gain: 0.14 },
+    ];
+
+    notes.forEach(({ freq, time, gain: maxGain }) => {
+      const osc = ctx.createOscillator();
+      const overtone = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+
+      overtone.type = 'sine';
+      overtone.frequency.setValueAtTime(freq * 3.92, time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.linearRampToValueAtTime(maxGain, time + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 1.2);
+
+      osc.connect(gain);
+      overtone.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(time);
+      overtone.start(time);
+      osc.stop(time + 1.25);
+      overtone.stop(time + 0.4);
+    });
+  } catch {
+    // safe fallback
+  }
+}
+
+function playWebTibetan(): void {
   try {
     const ctx = getWebAudioContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
 
-    // Fundamental: 432 Hz
+    // Peaceful Zen meditation bell: 528Hz + 264Hz warm undertone
     const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
+    const osc2 = ctx.createOscillator();
+    const osc3 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(432, now);
-    gain1.gain.setValueAtTime(0.18, now);
-    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 2.4);
+    osc1.frequency.setValueAtTime(528, now);
+
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(264, now);
+
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(1056, now);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.18, now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    osc3.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc3.start(now);
+    osc1.stop(now + 2.6);
+    osc2.stop(now + 2.6);
+    osc3.stop(now + 1.8);
+  } catch {
+    // safe fallback
+  }
+}
+
+function playWebMechanical(): void {
+  try {
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Crystal Harp: A5 (880Hz) -> E6 (1318.5Hz) airy glissando
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    const gain2 = ctx.createGain();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    gain1.gain.setValueAtTime(0.0001, now);
+    gain1.gain.linearRampToValueAtTime(0.14, now + 0.008);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
     osc1.connect(gain1);
     gain1.connect(ctx.destination);
     osc1.start(now);
-    osc1.stop(now + 2.5);
+    osc1.stop(now + 1.45);
 
-    // Harmonic overtone: 864 Hz
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(864, now);
-    gain2.gain.setValueAtTime(0.08, now);
-    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+    osc2.frequency.setValueAtTime(1318.5, now + 0.12);
+    gain2.gain.setValueAtTime(0.0001, now + 0.12);
+    gain2.gain.linearRampToValueAtTime(0.13, now + 0.128);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
     osc2.connect(gain2);
     gain2.connect(ctx.destination);
-    osc2.start(now);
-    osc2.stop(now + 1.9);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 1.65);
+  } catch {
+    // safe fallback
+  }
+}
 
-    // Subtle 5th: 648 Hz
-    const osc3 = ctx.createOscillator();
-    const gain3 = ctx.createGain();
-    osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(648, now);
-    gain3.gain.setValueAtTime(0.05, now);
-    gain3.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-    osc3.connect(gain3);
-    gain3.connect(ctx.destination);
-    osc3.start(now);
-    osc3.stop(now + 1.3);
+function playWebBreakComplete(): void {
+  try {
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Friendly 2-note marimba chime: C5 (523Hz) -> E5 (659Hz)
+    const notes = [
+      { freq: 523.25, time: now, gain: 0.15 },
+      { freq: 659.25, time: now + 0.12, gain: 0.16 },
+    ];
+
+    notes.forEach(({ freq, time, gain: maxGain }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.linearRampToValueAtTime(maxGain, time + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 1.0);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(time);
+      osc.stop(time + 1.05);
+    });
   } catch {
     // safe fallback
   }
@@ -360,15 +489,47 @@ export function playFocusStartSound(): void {
 }
 
 /**
- * Play focus completion tone (Harmonic resolution bell)
+ * Play focus completion tone with customizable tone palette
  */
-export function playFocusCompleteSound(): void {
+export function playFocusCompleteSound(tone: SoundAlertTone = 'clarity'): void {
   if (!isSoundEnabled) return;
   if (Platform.OS === 'web') {
-    playWebFocusComplete();
+    if (tone === 'tibetan') {
+      playWebTibetan();
+    } else if (tone === 'mechanical') {
+      playWebMechanical();
+    } else {
+      playWebClarity();
+    }
     return;
   }
-  void playNativeSound('focusComplete');
+
+  const key: SoundKey =
+    tone === 'tibetan'
+      ? 'focusCompleteTibetan'
+      : tone === 'mechanical'
+      ? 'focusCompleteMechanical'
+      : 'focusComplete';
+  void playNativeSound(key);
+}
+
+/**
+ * Play break completion tone (Gentle two-tone ascending chime)
+ */
+export function playBreakCompleteSound(): void {
+  if (!isSoundEnabled) return;
+  if (Platform.OS === 'web') {
+    playWebBreakComplete();
+    return;
+  }
+  void playNativeSound('breakComplete');
+}
+
+/**
+ * Play a preview of the selected alert tone for immediate feedback
+ */
+export function previewToneSound(tone: SoundAlertTone): void {
+  playFocusCompleteSound(tone);
 }
 
 /**
@@ -382,3 +543,4 @@ export function playResetSound(): void {
   }
   void playNativeSound('reset');
 }
+

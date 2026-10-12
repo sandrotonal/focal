@@ -1,8 +1,12 @@
+import type { PomodoroStage } from './preferencesStorage';
+
 export type TimerState = {
   elapsed: number;
   isRunning: boolean;
   startedAt: number | null;
   scheduledNotificationId: string | null;
+  timerMode?: PomodoroStage;
+  pomodoroCycle?: number;
 };
 
 const STORAGE_KEY = 'focal.timer';
@@ -25,7 +29,14 @@ export function loadTimerState(): TimerState {
   const serialized = storage?.getItem(STORAGE_KEY) ?? storage?.getItem(LEGACY_STORAGE_KEY);
 
   if (!serialized) {
-    return { elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null };
+    return {
+      elapsed: 0,
+      isRunning: false,
+      startedAt: null,
+      scheduledNotificationId: null,
+      timerMode: 'focus',
+      pomodoroCycle: 1,
+    };
   }
 
   try {
@@ -37,9 +48,24 @@ export function loadTimerState(): TimerState {
       scheduledNotificationId: typeof parsed.scheduledNotificationId === 'string'
         ? parsed.scheduledNotificationId
         : null,
+      timerMode:
+        parsed.timerMode === 'shortBreak' || parsed.timerMode === 'longBreak'
+          ? parsed.timerMode
+          : 'focus',
+      pomodoroCycle:
+        typeof parsed.pomodoroCycle === 'number'
+          ? Math.min(4, Math.max(1, Math.round(parsed.pomodoroCycle)))
+          : 1,
     };
   } catch {
-    return { elapsed: 0, isRunning: false, startedAt: null, scheduledNotificationId: null };
+    return {
+      elapsed: 0,
+      isRunning: false,
+      startedAt: null,
+      scheduledNotificationId: null,
+      timerMode: 'focus',
+      pomodoroCycle: 1,
+    };
   }
 }
 
