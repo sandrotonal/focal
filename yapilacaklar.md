@@ -112,6 +112,13 @@ Tüm 6 README vitrin ekran görüntüsü (Ritim Çarkı, Pomodoro Üçlüsü, Mi
 - README MMKV rozeti gercek AsyncStorage + L1 Cache mimarisiyle esitlendi.
 - app.json icine iOS UIBackgroundModes: ["audio"] izni ve benzersiz com.sandrotonal.focal namespace'i tanimlandi.
 
+13. 3-Ekranli Editoryal Onboarding & Minimalist Kapsul CTA (Tamamlandi)
+- %55 Tam kanama vektorel SVG illüstrasyonlar (Gunes saati, Akustik dalgalar, Flow state) + alt degrade gecisi.
+- %45 Sola yasli editoryal tipografi + 3 adimli kompakt kapsul gostergesi.
+- ModernSwitch toggle satirlari (Titresim, Ses, Bildirim).
+- Luks koyu kapsul govdesi, saf beyaz metin ve parlayan beyaz aksiyon butonu iceren imza CTA bari.
+- Zero-latency ses onbellekleme ve 120 FPS akici momentum sayfalama.
+
 Benim Focal icin oncelik siralamasi
 Oncelik	Is	Durum
 1	Gercek cihaz performans testi	Yapilmali
@@ -126,3 +133,5 @@ Oncelik	Is	Durum
 10	Apple Dynamic Island Banner	Tamamlandi
 11	Cold Start & Atomik Depolama	Tamamlandi
 12	Audio Lazy Loading & Manifest	Tamamlandi
+13	3-Ekranli Editoryal Onboarding	Tamamlandi
+

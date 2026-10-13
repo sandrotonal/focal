@@ -32,5 +32,7 @@ describe('i18n translations', () => {
     expect(translations.en.onboarding.slide2.title).toBeTruthy();
     expect(translations.tr.onboarding.slide3.title).toBeTruthy();
     expect(translations.en.onboarding.slide3.title).toBeTruthy();
+    expect(translations.tr.onboarding.slide4.title).toBeTruthy();
+    expect(translations.en.onboarding.slide4.title).toBeTruthy();
   });
 });
