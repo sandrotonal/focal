@@ -13,7 +13,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.focal.app"
+      "bundleIdentifier": "com.sandrotonal.focal",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +28,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.focal.app"
+      "package": "com.sandrotonal.focal"
     },
     "web": {
       "favicon": "./assets/favicon.png"

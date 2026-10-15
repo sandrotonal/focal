@@ -89,15 +89,49 @@ Ayrıca:
 - release instructions
 netleştirildi.
 Tüm 6 README vitrin ekran görüntüsü (Ritim Çarkı, Pomodoro Üçlüsü, Minimalist Sayaç, Bildirim Bannerı, Onboarding) güncel arayüz ile çekildi ve optimize edildi.
-Benim Focal için öncelik sıralamam
-Öncelik	İş	Durum
-🔴 1	Gerçek cihaz performans testi	Yapılmalı
-🔴 2	Timer/lifecycle edge-case testleri	Yapılmalı
-🟢 3	Unit test altyapısı	Tamamlandı (22/22 Test)
-🟠 4	App.tsx'i parçalama	Önerilir
-🟢 5	Büyük asset optimizasyonu	Tamamlandı
-🟠 6	Accessibility gerçek cihaz testi	Yapılmalı
-🟢 7	README & Ekran Görüntüleri	Tamamlandı (6 Vitrin Görseli Güncellendi)
-🟢 8	Yeni özellikler	Ritim Çarkı & Pomodoro Eklendi
+9. Ses Tasarimi ve Web/Mobil Akustik Paritesi (Tamamlandi)
+- Brief v1.0: 1.5s minimal kristal can (focus_complete_crystal.wav / focus-complete.wav, C#6 -> E6 -> G#6, sicak alt harmonikler, yumusak atak, havadar sonlanma, -1.2 dBFS tepe normalizasyonu).
+- Iki ek ozgun ses: Kutup Isigi (focus_complete_aurora.wav) ve Tibet Canagi (focus_complete_tibetan.wav).
+- Web Audio API ile Expo native oynatim arasinda 1:1 frekans ve zarf paritesi saglandi.
+- Native ses motoru expo-audio asenkron seek yaris kosullari giderildi; arka plan ve sessiz mod izinleri optimize edildi.
 
+10. Apple Dynamic Island Bildirim Uyumu (Tamamlandi)
+- AppleNotificationBanner bilesenine Dynamic Island tespiti (topInset >= 50) eklendi.
+- Ada altina oturan 28px kavisli ada formu ve ada genislemesini simule eden ust baglanti kapsulu eklendi.
+
+11. Cold Start Depolama Senkronizasyonu & Atomik Tercih Kuyrugu (Tamamlandi)
+- preferencesStorage.native.ts ve preferencesStorage.web.ts icerisine initPreferences baslaticisi eklendi.
+- usePreferences hook'unda isPreferencesLoaded yalanci dogrulugu kaldirildi; diskten okuma bitene kadar gercek yukleme kapisi kuruldu.
+- Read-modify-write yaris kosulunu onleyen bellek referansi ve sirali asenkron yazma kuyrugu (serial write queue) entegre edildi.
+- soundAlertTone union tipi validasyonuna 5 tonun tamami eklendi (crystal, aurora, clarity, tibetan, mechanical).
+
+12. Audio Core/Lazy Kaynak Yonetimi & Magaza Manifest Uyumu (Tamamlandi)
+- Acilista 12 AudioPlayer baslatilmasi engellendi; sadece kritik yol (tick havuzu, baslat, mola, sifirla ve aktif ton) onden yuklenir hale getirildi.
+- Diger tonlar (aurora, tibetan, clarity, mechanical) lazy-load mekanizmasina baglandi.
+- assets/sounds/ icindeki 264 KB mukerrer WAV dosyalari silindi, tekil kaynak referansi saglandi.
+- README MMKV rozeti gercek AsyncStorage + L1 Cache mimarisiyle esitlendi.
+- app.json icine iOS UIBackgroundModes: ["audio"] izni ve benzersiz com.sandrotonal.focal namespace'i tanimlandi.
+
+13. 3-Ekranli Editoryal Onboarding & Minimalist Kapsul CTA (Tamamlandi)
+- %55 Tam kanama vektorel SVG illüstrasyonlar (Gunes saati, Akustik dalgalar, Flow state) + alt degrade gecisi.
+- %45 Sola yasli editoryal tipografi + 3 adimli kompakt kapsul gostergesi.
+- ModernSwitch toggle satirlari (Titresim, Ses, Bildirim).
+- Luks koyu kapsul govdesi, saf beyaz metin ve parlayan beyaz aksiyon butonu iceren imza CTA bari.
+- Zero-latency ses onbellekleme ve 120 FPS akici momentum sayfalama.
+
+Benim Focal icin oncelik siralamasi
+Oncelik	Is	Durum
+1	Gercek cihaz performans testi	Yapilmali
+2	Timer/lifecycle edge-case testleri	Yapilmali
+3	Unit test altyapisi	Tamamlandi (23/23 Test)
+4	App.tsx'i parcalama	Onerilir
+5	Buyuk asset optimizasyonu	Tamamlandi
+6	Accessibility gercek cihaz testi	Yapilmali
+7	README & Ekran Goruntuleri	Tamamlandi (6 Vitrin Gorseli Guncellendi)
+8	Yeni ozellikler	Ritim Carki & Pomodoro Eklendi
+9	Ses Tasarimi & Mobil Parite	Tamamlandi (Kristal, Kutup Isigi, Tibet)
+10	Apple Dynamic Island Banner	Tamamlandi
+11	Cold Start & Atomik Depolama	Tamamlandi
+12	Audio Lazy Loading & Manifest	Tamamlandi
+13	3-Ekranli Editoryal Onboarding	Tamamlandi
 

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import {
@@ -7,6 +8,7 @@ import {
   Language,
   SoundAlertTone,
   ThemeMode,
+  initPreferences,
   loadPreferences,
   savePreferences,
 } from '../storage/preferencesStorage';
@@ -37,14 +39,14 @@ function getInitialPreferences(): FocusPreferences {
       pomodoroCycle: 1,
       pomodoroShortBreakMinutes: 5,
       pomodoroLongBreakMinutes: 15,
-      soundAlertTone: 'clarity',
+      soundAlertTone: 'crystal',
     };
   }
 }
 
 export function usePreferences() {
   const [initial] = useState(getInitialPreferences);
-  const isPreferencesLoaded = true;
+  const [isPreferencesLoaded, setIsPreferencesLoaded] = useState(Platform.OS === 'web');
   const [onboardingCompleted, setOnboardingCompleted] = useState(initial.onboardingCompleted);
   const [sessionMinutes, setSessionMinutes] = useState(initial.sessionMinutes ?? 25);
   const [sessionSeconds, setSessionSeconds] = useState(initial.sessionSeconds ?? 30);
@@ -69,12 +71,77 @@ export function usePreferences() {
   const [pomodoroLongBreakMinutes, setPomodoroLongBreakMinutesState] = useState(
     initial.pomodoroLongBreakMinutes ?? 15
   );
-  const [soundAlertTone, setSoundAlertTone] = useState<SoundAlertTone>(initial.soundAlertTone ?? 'clarity');
+  const [soundAlertTone, setSoundAlertTone] = useState<SoundAlertTone>(initial.soundAlertTone ?? 'crystal');
+
+  const latestPreferencesRef = useRef<FocusPreferences>({
+    ...initial,
+    sessionMinutes,
+    sessionSeconds,
+    durationUnit,
+    theme,
+    language,
+    notificationsEnabled,
+    hapticsEnabled,
+    soundEnabled,
+    onboardingCompleted,
+    completedSessions,
+    totalFocusMinutes,
+    pomodoroEnabled,
+    pomodoroCycle,
+    pomodoroShortBreakMinutes,
+    pomodoroLongBreakMinutes,
+    soundAlertTone,
+  });
+
+  // Ensure persistent storage is hydrated on app launch
+  useEffect(() => {
+    let isMounted = true;
+    void initPreferences()
+      .then((loaded) => {
+        if (!isMounted) return;
+        setOnboardingCompleted(loaded.onboardingCompleted);
+        setSessionMinutes(loaded.sessionMinutes);
+        setSessionSeconds(loaded.sessionSeconds);
+        setDurationUnit(loaded.durationUnit);
+        setDurationDraft(
+          loaded.durationUnit === 'seconds'
+            ? String(loaded.sessionSeconds)
+            : String(loaded.sessionMinutes)
+        );
+        setTheme(loaded.theme);
+        setLanguage(loaded.language);
+        setHapticsEnabled(loaded.hapticsEnabled);
+        setNotificationsEnabled(loaded.notificationsEnabled);
+        setSoundEnabled(loaded.soundEnabled);
+        setCompletedSessions(loaded.completedSessions);
+        setTotalFocusMinutes(loaded.totalFocusMinutes);
+        setPomodoroEnabled(loaded.pomodoroEnabled);
+        setPomodoroCycle(loaded.pomodoroCycle);
+        setPomodoroShortBreakMinutesState(loaded.pomodoroShortBreakMinutes);
+        setPomodoroLongBreakMinutesState(loaded.pomodoroLongBreakMinutes);
+        setSoundAlertTone(loaded.soundAlertTone);
+        latestPreferencesRef.current = loaded;
+        setIsPreferencesLoaded(true);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsPreferencesLoaded(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const saveCurrentPreferences = useCallback((patch: Partial<FocusPreferences>) => {
     try {
-      const current = loadPreferences();
-      savePreferences({ ...current, ...patch });
+      const updated: FocusPreferences = {
+        ...latestPreferencesRef.current,
+        ...patch,
+      };
+      latestPreferencesRef.current = updated;
+      savePreferences(updated);
     } catch {
       // Graceful local storage fallback
     }

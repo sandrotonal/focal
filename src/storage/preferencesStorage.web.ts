@@ -1,7 +1,7 @@
 export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
 export type DurationUnit = 'minutes' | 'seconds';
-export type SoundAlertTone = 'clarity' | 'tibetan' | 'mechanical';
+export type SoundAlertTone = 'crystal' | 'aurora' | 'clarity' | 'tibetan' | 'mechanical';
 export type PomodoroStage = 'focus' | 'shortBreak' | 'longBreak';
 
 export type FocusPreferences = {
@@ -41,7 +41,7 @@ const defaults: FocusPreferences = {
   pomodoroCycle: 1,
   pomodoroShortBreakMinutes: 5,
   pomodoroLongBreakMinutes: 15,
-  soundAlertTone: 'clarity',
+  soundAlertTone: 'crystal',
 };
 
 function getLocalStorage() {
@@ -93,13 +93,21 @@ export function loadPreferences(): FocusPreferences {
         ? Math.min(120, Math.max(1, Math.round(parsed.pomodoroLongBreakMinutes)))
         : 15,
       soundAlertTone:
-        parsed.soundAlertTone === 'tibetan' || parsed.soundAlertTone === 'mechanical'
+        parsed.soundAlertTone === 'crystal' ||
+        parsed.soundAlertTone === 'aurora' ||
+        parsed.soundAlertTone === 'clarity' ||
+        parsed.soundAlertTone === 'tibetan' ||
+        parsed.soundAlertTone === 'mechanical'
           ? parsed.soundAlertTone
-          : 'clarity',
+          : defaults.soundAlertTone,
     };
   } catch {
     return defaults;
   }
+}
+
+export function initPreferences(): Promise<FocusPreferences> {
+  return Promise.resolve(loadPreferences());
 }
 
 export function savePreferences(preferences: FocusPreferences) {

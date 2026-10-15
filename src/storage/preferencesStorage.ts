@@ -12,5 +12,6 @@ export type {
 } from './preferencesStorage.web';
 
 export const loadPreferences = Platform.OS === 'web' ? WebStorage.loadPreferences : NativeStorage.loadPreferences;
+export const initPreferences = Platform.OS === 'web' ? WebStorage.initPreferences : NativeStorage.initPreferences;
 export const savePreferences = Platform.OS === 'web' ? WebStorage.savePreferences : NativeStorage.savePreferences;
 

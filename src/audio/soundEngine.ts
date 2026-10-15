@@ -25,7 +25,10 @@ const SOUND_ASSETS: Record<
   | 'tick'
   | 'focusStart'
   | 'focusComplete'
+  | 'focusCompleteCrystal'
+  | 'focusCompleteAurora'
   | 'focusCompleteTibetan'
+  | 'focusCompleteClarity'
   | 'focusCompleteMechanical'
   | 'breakComplete'
   | 'reset',
@@ -33,14 +36,33 @@ const SOUND_ASSETS: Record<
 > = {
   tick: require('../../assets/sounds/tick.wav'),
   focusStart: require('../../assets/sounds/focus_start.wav'),
-  focusComplete: require('../../assets/sounds/focus_complete.wav'),
+  focusComplete: require('../../assets/sounds/focus_complete_crystal.wav'),
+  focusCompleteCrystal: require('../../assets/sounds/focus_complete_crystal.wav'),
+  focusCompleteAurora: require('../../assets/sounds/focus_complete_aurora.wav'),
   focusCompleteTibetan: require('../../assets/sounds/focus_complete_tibetan.wav'),
+  focusCompleteClarity: require('../../assets/sounds/focus_complete_clarity.wav'),
   focusCompleteMechanical: require('../../assets/sounds/focus_complete_mechanical.wav'),
   breakComplete: require('../../assets/sounds/break_complete.wav'),
   reset: require('../../assets/sounds/reset.wav'),
 };
 
 type SoundKey = keyof typeof SOUND_ASSETS;
+
+function getToneSoundKey(tone: SoundAlertTone): SoundKey {
+  switch (tone) {
+    case 'aurora':
+      return 'focusCompleteAurora';
+    case 'tibetan':
+      return 'focusCompleteTibetan';
+    case 'clarity':
+      return 'focusCompleteClarity';
+    case 'mechanical':
+      return 'focusCompleteMechanical';
+    case 'crystal':
+    default:
+      return 'focusCompleteCrystal';
+  }
+}
 
 // Lazy native module loader to avoid crashing in unsupported environments
 let expoAudioModule: typeof import('expo-audio') | null = null;
@@ -61,7 +83,7 @@ function getExpoAudio(): typeof import('expo-audio') | null {
   }
 }
 
-// Configure native audio session (e.g. silent mode playback)
+// Configure native audio session (e.g. silent mode playback & background continuity)
 let isAudioModeConfigured = false;
 
 async function ensureAudioMode(audio: typeof import('expo-audio')): Promise<void> {
@@ -70,6 +92,7 @@ async function ensureAudioMode(audio: typeof import('expo-audio')): Promise<void
     await audio.setAudioModeAsync({
       playsInSilentMode: true,
       interruptionMode: 'mixWithOthers',
+      shouldPlayInBackground: true,
     });
     isAudioModeConfigured = true;
   } catch {
@@ -90,7 +113,7 @@ function getTickPlayer(audio: typeof import('expo-audio')): AudioPlayer | null {
     try {
       while (tickPlayerPool.length < TICK_POOL_SIZE) {
         const player = audio.createAudioPlayer(SOUND_ASSETS.tick);
-        player.volume = 0.5;
+        player.volume = 0.85;
         tickPlayerPool.push(player);
       }
     } catch {
@@ -110,7 +133,7 @@ function getOrCreatePlayer(audio: typeof import('expo-audio'), key: SoundKey): A
   }
   try {
     const player = audio.createAudioPlayer(SOUND_ASSETS[key]);
-    player.volume = 0.7;
+    player.volume = 1.0;
     nativePlayerCache[key] = player;
     return player;
   } catch {
@@ -118,26 +141,40 @@ function getOrCreatePlayer(audio: typeof import('expo-audio'), key: SoundKey): A
   }
 }
 
-// Preload native players eagerly in background
-export function preloadNativeSounds(): void {
+/**
+ * Preload only critical-path native players (tick pool, focus start, break, reset, and active tone).
+ * Secondary / preview tones are lazy-loaded on demand to preserve mobile decoder resources.
+ */
+export function preloadNativeSounds(activeTone: SoundAlertTone = 'crystal'): void {
   const audio = getExpoAudio();
   if (!audio) return;
   void ensureAudioMode(audio);
   getTickPlayer(audio);
-  const keys: SoundKey[] = [
+
+  const criticalKeys: SoundKey[] = [
     'focusStart',
-    'focusComplete',
-    'focusCompleteTibetan',
-    'focusCompleteMechanical',
     'breakComplete',
     'reset',
+    getToneSoundKey(activeTone),
   ];
-  for (const key of keys) {
+
+  for (const key of criticalKeys) {
     getOrCreatePlayer(audio, key);
   }
 }
 
-// Initial eager preload on mobile devices (bypassed in test environment)
+/**
+ * Lazy preload for previewing or switching to secondary alert tones
+ */
+export function preloadToneSound(tone: SoundAlertTone): void {
+  const audio = getExpoAudio();
+  if (!audio) return;
+  void ensureAudioMode(audio);
+  const key = getToneSoundKey(tone);
+  getOrCreatePlayer(audio, key);
+}
+
+// Initial eager preload of core audio on mobile devices (bypassed in test environment)
 if (Platform.OS !== 'web' && process.env.NODE_ENV !== 'test') {
   setTimeout(() => {
     preloadNativeSounds();
@@ -155,7 +192,7 @@ function playNativeSound(key: SoundKey): void {
       const player = getTickPlayer(audio);
       if (!player) return;
       try {
-        if (player.currentTime > 0.04) {
+        if (player.currentTime > 0.03) {
           void player.seekTo(0).then(() => {
             player.play();
           }).catch(() => {
@@ -174,7 +211,14 @@ function playNativeSound(key: SoundKey): void {
     if (!player) return;
 
     try {
-      void player.seekTo(0).catch(() => {});
+      if (player.currentTime > 0) {
+        void player.seekTo(0).then(() => {
+          player.play();
+        }).catch(() => {
+          player.play();
+        });
+        return;
+      }
     } catch {
       // Seek may not be supported immediately
     }
@@ -270,6 +314,99 @@ function playWebFocusStart(): void {
 
     osc.start(now);
     osc.stop(now + 0.95);
+  } catch {
+    // safe fallback
+  }
+}
+
+function playWebCrystal(): void {
+  try {
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Ascending crystal-glass chime triad per Sound Design Brief: C#6, E6, G#6
+    const notes = [
+      { freq: 1108.73, subFreq: 554.37, shimmerFreq: 2217.46, time: now, gain: 0.22, duration: 1.45 },
+      { freq: 1318.51, subFreq: 659.26, shimmerFreq: 2637.02, time: now + 0.15, gain: 0.24, duration: 1.35 },
+      { freq: 1661.22, subFreq: 830.61, shimmerFreq: 3322.44, time: now + 0.32, gain: 0.26, duration: 1.18 },
+    ];
+
+    notes.forEach(({ freq, subFreq, shimmerFreq, time, gain: maxGain, duration }) => {
+      const osc = ctx.createOscillator();
+      const oscSub = ctx.createOscillator();
+      const oscShimmer = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+
+      oscSub.type = 'sine';
+      oscSub.frequency.setValueAtTime(subFreq, time);
+
+      oscShimmer.type = 'sine';
+      oscShimmer.frequency.setValueAtTime(shimmerFreq, time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.linearRampToValueAtTime(maxGain, time + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+      osc.connect(gain);
+      oscSub.connect(gain);
+      oscShimmer.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(time);
+      oscSub.start(time);
+      oscShimmer.start(time);
+
+      osc.stop(time + duration);
+      oscSub.stop(time + duration * 0.7);
+      oscShimmer.stop(time + duration * 0.45);
+    });
+  } catch {
+    // safe fallback
+  }
+}
+
+function playWebAurora(): void {
+  try {
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // D Major celestial harmony: D5 -> A5 -> F#6
+    const notes = [
+      { freq: 587.33, time: now, gain: 0.20, duration: 1.65 },
+      { freq: 880.00, time: now + 0.18, gain: 0.22, duration: 1.48 },
+      { freq: 1479.98, time: now + 0.38, gain: 0.25, duration: 1.30 },
+    ];
+
+    notes.forEach(({ freq, time, gain: maxGain, duration }) => {
+      const osc = ctx.createOscillator();
+      const oscSub = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+
+      oscSub.type = 'sine';
+      oscSub.frequency.setValueAtTime(freq * 0.5, time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.linearRampToValueAtTime(maxGain, time + 0.028);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+      osc.connect(gain);
+      oscSub.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(time);
+      oscSub.start(time);
+
+      osc.stop(time + duration);
+      oscSub.stop(time + duration * 0.8);
+    });
   } catch {
     // safe fallback
   }
@@ -491,25 +628,37 @@ export function playFocusStartSound(): void {
 /**
  * Play focus completion tone with customizable tone palette
  */
-export function playFocusCompleteSound(tone: SoundAlertTone = 'clarity'): void {
+export function playFocusCompleteSound(tone: SoundAlertTone = 'crystal'): void {
   if (!isSoundEnabled) return;
   if (Platform.OS === 'web') {
-    if (tone === 'tibetan') {
-      playWebTibetan();
-    } else if (tone === 'mechanical') {
-      playWebMechanical();
-    } else {
-      playWebClarity();
+    switch (tone) {
+      case 'aurora':
+        playWebAurora();
+        break;
+      case 'tibetan':
+        playWebTibetan();
+        break;
+      case 'clarity':
+        playWebClarity();
+        break;
+      case 'mechanical':
+        playWebMechanical();
+        break;
+      case 'crystal':
+      default:
+        playWebCrystal();
+        break;
     }
     return;
   }
 
-  const key: SoundKey =
-    tone === 'tibetan'
-      ? 'focusCompleteTibetan'
-      : tone === 'mechanical'
-      ? 'focusCompleteMechanical'
-      : 'focusComplete';
+  let key: SoundKey = 'focusCompleteCrystal';
+  if (tone === 'aurora') key = 'focusCompleteAurora';
+  else if (tone === 'tibetan') key = 'focusCompleteTibetan';
+  else if (tone === 'clarity') key = 'focusCompleteClarity';
+  else if (tone === 'mechanical') key = 'focusCompleteMechanical';
+  else key = 'focusCompleteCrystal';
+
   void playNativeSound(key);
 }
 

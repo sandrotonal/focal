@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -9,25 +9,28 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, {
-  interpolate,
   runOnJS,
   useAnimatedScrollHandler,
-  useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
 } from 'react-native-reanimated';
-import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AmbientGlow } from './AmbientGlow';
 import {
-  ArtworkFocusCore3D,
-  ArtworkRhythmPicker,
-  ArtworkSensorySettings,
+  ArtworkSundialDesk,
+  ArtworkAcousticWaves,
+  ArtworkFlowState,
+  PreferencesToggleList,
+  InlineProgressPill,
+  CapsuleCtaButton,
 } from './Artwork3D';
 import { OnboardingSlide3D } from './OnboardingSlide3D';
 import type { AppColors, FocusPreferences } from './types';
 import { requestNotificationPermission } from '../../notifications/notifications';
-import { playFocusStartSound, playTickSound } from '../../audio/soundEngine';
+import {
+  playFocusStartSound,
+  playTickSound,
+  preloadNativeSounds,
+} from '../../audio/soundEngine';
 import { translations, Language } from '../../i18n/translations';
 
 type Props = {
@@ -36,12 +39,14 @@ type Props = {
   onComplete: (preferences: FocusPreferences) => void;
 };
 
+const TOTAL_STEPS = 3;
+const BG_COLOR = '#0A0A0C';
+
 export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingScreen({
-  colors,
   initialLanguage = 'tr',
   onComplete,
 }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const scrollRef = useRef<Animated.ScrollView>(null);
@@ -49,23 +54,40 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
 
   const [language, setLanguage] = useState<Language>(initialLanguage);
   const [step, setStep] = useState(0);
-  const [sessionMinutes, setSessionMinutes] = useState(25);
+  const [sessionMinutes] = useState(25);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const totalSteps = 3;
+  // Programmatic navigation lock to avoid duplicate sound/haptics
+  const isProgrammaticNav = useRef(false);
+  const navTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Eagerly preload native sound decoders on screen mount for zero-latency audio
+  useEffect(() => {
+    preloadNativeSounds();
+    return () => {
+      if (navTimeout.current) clearTimeout(navTimeout.current);
+    };
+  }, []);
+
+  // Top 55% visual height calculation
+  const visualHeight = Math.round(height * 0.54);
+
   const t = translations[language];
 
-  const triggerHaptic = useCallback((style = Haptics.ImpactFeedbackStyle.Light) => {
-    if (hapticsEnabled) {
-      try {
-        void Haptics.impactAsync(style);
-      } catch {
-        // fallback
+  const triggerHaptic = useCallback(
+    (style = Haptics.ImpactFeedbackStyle.Light) => {
+      if (hapticsEnabled) {
+        try {
+          void Haptics.impactAsync(style);
+        } catch {
+          // safe fallback
+        }
       }
-    }
-  }, [hapticsEnabled]);
+    },
+    [hapticsEnabled]
+  );
 
   const toggleLanguage = useCallback(() => {
     const nextLang: Language = language === 'tr' ? 'en' : 'tr';
@@ -96,62 +118,115 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
     });
   }, [hapticsEnabled, language, notificationsEnabled, onComplete, sessionMinutes, soundEnabled, triggerHaptic]);
 
-  const handleStepChange = useCallback((newStep: number) => {
-    setStep((prev) => {
-      if (prev === newStep) return prev;
-      triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
-      if (soundEnabled) {
-        void playTickSound();
-      }
-      return newStep;
-    });
-  }, [soundEnabled, triggerHaptic]);
+  // Handle manual swipe momentum snap (only triggers audio/haptics when user finishes drag)
+  const handleMomentumSnap = useCallback(
+    (snapIndex: number) => {
+      if (isProgrammaticNav.current) return;
+      setStep((prev) => {
+        if (prev === snapIndex) return prev;
+        triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
+        if (soundEnabled) {
+          void playTickSound();
+        }
+        return snapIndex;
+      });
+    },
+    [soundEnabled, triggerHaptic]
+  );
 
+  // Pure UI-thread scroll handler for 120 FPS buttery parallax
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollX.value = event.contentOffset.x;
+    },
+    onMomentumEnd: (event) => {
       const current = Math.round(event.contentOffset.x / width);
-      runOnJS(handleStepChange)(current);
+      runOnJS(handleMomentumSnap)(current);
     },
   });
 
+  // Programmatic forward step navigation
   const moveToStep = useCallback(
-    async (nextStep: number) => {
-      if (nextStep >= totalSteps) {
-        if (notificationsEnabled) {
-          try {
-            const granted = await requestNotificationPermission();
-            if (!granted) {
-              setNotificationsEnabled(false);
-            }
-          } catch {
-            // notification error fallback
-          }
-        }
+    (nextStep: number) => {
+      if (nextStep >= TOTAL_STEPS) {
         finish();
         return;
+      }
+
+      if (navTimeout.current) clearTimeout(navTimeout.current);
+      isProgrammaticNav.current = true;
+
+      setStep(nextStep);
+      triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
+      if (soundEnabled) {
+        void playTickSound();
       }
 
       scrollRef.current?.scrollTo({
         x: nextStep * width,
         animated: !reducedMotion,
       });
-      setStep(nextStep);
+
+      navTimeout.current = setTimeout(() => {
+        isProgrammaticNav.current = false;
+      }, 420);
+    },
+    [finish, reducedMotion, soundEnabled, triggerHaptic, width]
+  );
+
+  const handleRequestNotification = useCallback(async () => {
+    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const granted = await requestNotificationPermission();
+      setNotificationsEnabled(granted);
+      if (granted) {
+        triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
+        if (soundEnabled) {
+          void playTickSound();
+        }
+      }
+    } catch {
+      setNotificationsEnabled(false);
+    }
+  }, [soundEnabled, triggerHaptic]);
+
+  const handleToggleNotifications = useCallback(async () => {
+    if (!notificationsEnabled) {
+      await handleRequestNotification();
+    } else {
+      setNotificationsEnabled(false);
       triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
       if (soundEnabled) {
         void playTickSound();
       }
-    },
-    [finish, notificationsEnabled, reducedMotion, soundEnabled, totalSteps, triggerHaptic, width]
-  );
+    }
+  }, [handleRequestNotification, notificationsEnabled, soundEnabled, triggerHaptic]);
+
+  const handlePrimaryCtaPress = useCallback(async () => {
+    if (step === 0) {
+      moveToStep(1);
+    } else if (step === 1) {
+      if (!notificationsEnabled) {
+        await handleRequestNotification();
+      }
+      moveToStep(2);
+    } else if (step === 2) {
+      finish();
+    }
+  }, [finish, handleRequestNotification, moveToStep, notificationsEnabled, step]);
+
+  // Primary CTA label depending on active step
+  const capsuleCtaLabel =
+    step === 2
+      ? t.onboarding.start
+      : step === 1 && !notificationsEnabled
+      ? t.onboarding.allowNotifications
+      : t.onboarding.continue;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Subtle Ambient Aura */}
-      <AmbientGlow colors={colors} scrollX={scrollX} width={width} />
-
-      {/* Minimal Top Header */}
-      <View style={[styles.header, { top: insets.top + 12 }]}>
+    <View style={styles.container}>
+      {/* Floating Top Bar (z-index: 20) gently overlaying artwork */}
+      <View style={[styles.floatingHeader, { top: insets.top + 10 }]}>
         <View style={styles.brandRow}>
           <Image
             source={require('../../../assets/focal-logo.png')}
@@ -160,45 +235,39 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
             accessible
             accessibilityLabel="Focal Logo"
           />
-          <Text style={[styles.brandTitle, { color: colors.primary }]}>{t.common.appName}</Text>
+          <Text style={styles.brandTitle}>{t.common.appName}</Text>
         </View>
 
         <View style={styles.headerRight}>
-          {/* Language Switcher Pill */}
+          {/* Borderless Text-Only Language Switcher */}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t.drawer.aria.languageSwitch}
-            hitSlop={8}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={toggleLanguage}
-            style={({ pressed }) => [
-              styles.langPill,
-              { borderColor: colors.hairline, backgroundColor: `${colors.panel}` },
-              pressed && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.headerTextBtn, pressed && styles.pressed]}
           >
-            <Text style={[styles.langPillText, { color: colors.accent }]}>
-              {language.toUpperCase()}
-            </Text>
+            <Text style={styles.headerTextBtnLabel}>{language.toUpperCase()}</Text>
           </Pressable>
 
-          <Text style={[styles.stepCounter, { color: colors.muted }]}>
-            {`${String(step + 1).padStart(2, '0')} // ${String(totalSteps).padStart(2, '0')}`}
-          </Text>
-          {step < totalSteps - 1 && (
+          {/* Borderless Text Skip Button with Space Reservation */}
+          {step < TOTAL_STEPS - 1 ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={t.common.skip}
-              hitSlop={12}
+              accessibilityLabel={t.onboarding.skip}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={finish}
-              style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.headerTextBtn, pressed && styles.pressed]}
             >
-              <Text style={[styles.skipText, { color: colors.muted }]}>{t.common.skip}</Text>
+              <Text style={styles.headerTextBtnLabel}>{t.onboarding.skip}</Text>
             </Pressable>
+          ) : (
+            <View style={styles.headerBtnPlaceholder} />
           )}
         </View>
       </View>
 
-      {/* 3D Animated Horizontal Carousel */}
+      {/* Horizontal Carousel (3 Refined Editorial Screens) */}
       <Animated.ScrollView
         ref={scrollRef}
         horizontal
@@ -208,152 +277,128 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
         onScroll={scrollHandler}
         style={styles.pager}
       >
-        {/* SLIDE 1 */}
+        {/* ================================================================ */}
+        {/* EKRAN 1: KARŞILAMA (SUNDIAL DESK HERO)                           */}
+        {/* ================================================================ */}
         <OnboardingSlide3D
           index={0}
           width={width}
           scrollX={scrollX}
           reducedMotion={Boolean(reducedMotion)}
         >
-          <ArtworkFocusCore3D
-            colors={colors}
-            language={language}
-            scrollX={scrollX}
-            width={width}
-            reducedMotion={Boolean(reducedMotion)}
-          />
-          <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            {t.onboarding.slide1.title}
-          </Text>
-          <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            {t.onboarding.slide1.body}
-          </Text>
+          {/* Top 55% Full-Bleed Artwork */}
+          <ArtworkSundialDesk width={width} height={visualHeight} />
+
+          {/* Bottom 45% Editorial Content Area */}
+          <View style={styles.bottomContentArea}>
+            <Text style={styles.headlineText}>{t.onboarding.slide1.title}</Text>
+            <Text style={styles.subtitleText}>{t.onboarding.slide1.body}</Text>
+            <InlineProgressPill currentStep={0} totalSteps={TOTAL_STEPS} />
+          </View>
         </OnboardingSlide3D>
 
-        {/* SLIDE 2 */}
+        {/* ================================================================ */}
+        {/* EKRAN 2: BİLDİRİM İZNİ (ACOUSTIC WAVES)                          */}
+        {/* ================================================================ */}
         <OnboardingSlide3D
           index={1}
           width={width}
           scrollX={scrollX}
           reducedMotion={Boolean(reducedMotion)}
         >
-          <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            {t.onboarding.slide2.title}
-          </Text>
-          <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            {t.onboarding.slide2.body}
-          </Text>
-          <ArtworkRhythmPicker
-            colors={colors}
-            language={language}
-            selectedMinutes={sessionMinutes}
-            onSelect={setSessionMinutes}
-            hapticsEnabled={hapticsEnabled}
-          />
+          {/* Top 55% Full-Bleed Artwork */}
+          <ArtworkAcousticWaves width={width} height={visualHeight} />
+
+          {/* Bottom 45% Editorial Content Area */}
+          <View style={styles.bottomContentArea}>
+            <Text style={styles.headlineText}>{t.onboarding.slide3.title}</Text>
+            <Text style={styles.subtitleText}>{t.onboarding.slide3.body}</Text>
+            <InlineProgressPill currentStep={1} totalSteps={TOTAL_STEPS} />
+          </View>
         </OnboardingSlide3D>
 
-        {/* SLIDE 3 */}
+        {/* ================================================================ */}
+        {/* EKRAN 3: TERCİHLER & TOGGLES (FLOW STATE)                       */}
+        {/* ================================================================ */}
         <OnboardingSlide3D
           index={2}
           width={width}
           scrollX={scrollX}
           reducedMotion={Boolean(reducedMotion)}
         >
-          <Text style={[styles.slideTitle, { color: colors.primary }]}>
-            {t.onboarding.slide3.title}
-          </Text>
-          <Text style={[styles.slideBody, { color: colors.secondary }]}>
-            {t.onboarding.slide3.body}
-          </Text>
-          <ArtworkSensorySettings
-            colors={colors}
-            language={language}
-            notificationsEnabled={notificationsEnabled}
-            hapticsEnabled={hapticsEnabled}
-            soundEnabled={soundEnabled}
-            onToggleNotifications={() => setNotificationsEnabled((prev) => !prev)}
-            onToggleHaptics={() => setHapticsEnabled((prev) => !prev)}
-            onToggleSound={() => setSoundEnabled((prev) => !prev)}
-          />
+          {/* Top 55% Full-Bleed Artwork */}
+          <ArtworkFlowState width={width} height={visualHeight} />
+
+          {/* Bottom 45% Editorial Content Area */}
+          <View style={styles.bottomContentArea}>
+            <Text style={styles.headlineText}>{t.onboarding.slide4.title}</Text>
+            <Text style={styles.subtitleText}>{t.onboarding.slide4.body}</Text>
+
+            {/* Clean Modern Switch Toggle Rows */}
+            <PreferencesToggleList
+              language={language}
+              notificationsEnabled={notificationsEnabled}
+              hapticsEnabled={hapticsEnabled}
+              soundEnabled={soundEnabled}
+              onToggleNotifications={handleToggleNotifications}
+              onToggleHaptics={() => setHapticsEnabled((prev) => !prev)}
+              onToggleSound={() => setSoundEnabled((prev) => !prev)}
+            />
+
+            <InlineProgressPill currentStep={2} totalSteps={TOTAL_STEPS} />
+          </View>
         </OnboardingSlide3D>
       </Animated.ScrollView>
 
-      {/* Bottom Footer Actions */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 16, 32) }]}>
-        {/* Minimal Linear Progress Segments */}
-        <View style={styles.progressRow}>
-          {Array.from({ length: totalSteps }).map((_, idx) => (
-            <ProgressPill
-              key={idx}
-              index={idx}
-              scrollX={scrollX}
-              width={width}
-              colors={colors}
-            />
-          ))}
-        </View>
+      {/* Floating Bottom Footer: Harmonious Signature Capsule CTA Button */}
+      <View
+        style={[
+          styles.floatingFooter,
+          { paddingBottom: Math.max(insets.bottom + 14, 26) },
+        ]}
+      >
+        {/* Secondary Action Link on Step 1 ("Şimdi geç" / "Skip for now") */}
+        {step === 1 && !notificationsEnabled ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t.onboarding.skipForNow}
+            hitSlop={{ top: 10, bottom: 10, left: 14, right: 14 }}
+            onPress={() => moveToStep(2)}
+            style={({ pressed }) => [styles.secondaryLink, pressed && styles.pressed]}
+          >
+            <Text style={styles.secondaryLinkText}>
+              {t.onboarding.skipForNow}
+            </Text>
+          </Pressable>
+        ) : (
+          <View style={styles.secondaryLinkPlaceholder} />
+        )}
 
-        {/* Primary Action Button */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={step === totalSteps - 1 ? t.common.start : t.common.continue}
-          onPress={() => void moveToStep(step + 1)}
-          style={({ pressed }) => [
-            styles.ctaButton,
-            { backgroundColor: colors.primary },
-            pressed && styles.ctaButtonPressed,
-          ]}
-        >
-          <Text style={[styles.ctaButtonText, { color: colors.background }]}>
-            {step === totalSteps - 1 ? t.common.start : t.common.continue}
-          </Text>
-        </Pressable>
+        {/* Harmonious Signature Capsule CTA Button */}
+        <CapsuleCtaButton
+          label={capsuleCtaLabel}
+          onPress={() => void handlePrimaryCtaPress()}
+          accessibilityLabel={capsuleCtaLabel}
+        />
       </View>
     </View>
-  );
-});
-
-// Minimalist Segment Indicator
-const ProgressPill: React.FC<{
-  index: number;
-  scrollX: SharedValue<number>;
-  width: number;
-  colors: AppColors;
-}> = React.memo(function ProgressPill({ index, scrollX, width, colors }) {
-  const pillStyle = useAnimatedStyle(() => {
-    const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-    const opacity = interpolate(scrollX.value, inputRange, [0.2, 1, 0.2], 'clamp');
-    const scaleX = interpolate(scrollX.value, inputRange, [0.8, 1.2, 0.8], 'clamp');
-
-    return {
-      opacity,
-      transform: [{ scaleX }],
-    };
-  });
-
-  return (
-    <Animated.View
-      style={[
-        styles.progressPill,
-        { backgroundColor: colors.primary },
-        pillStyle,
-      ]}
-    />
   );
 });
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BG_COLOR,
   },
-  header: {
+  floatingHeader: {
     position: 'absolute',
     left: 24,
     right: 24,
-    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 20,
+    height: 38,
   },
   brandRow: {
     flexDirection: 'row',
@@ -361,105 +406,91 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   brandLogo: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
   },
   brandTitle: {
     fontFamily: 'System',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 2.5,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: '#FFFFFF',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
   },
-  langPill: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  headerTextBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  langPillText: {
+  headerTextBtnLabel: {
     fontFamily: 'System',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#A1A1AA',
   },
-  stepCounter: {
-    fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-  },
-  skipButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  skipText: {
-    fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+  headerBtnPlaceholder: {
+    minWidth: 36,
+    height: 28,
   },
   pager: {
     flex: 1,
   },
-  slideTitle: {
+  bottomContentArea: {
+    flex: 1,
+    paddingHorizontal: 28,
+    paddingTop: 8,
+  },
+  headlineText: {
     fontFamily: 'System',
     fontSize: 30,
     fontWeight: '700',
-    letterSpacing: -0.8,
-    textAlign: 'center',
-    marginTop: 18,
-    marginBottom: 8,
+    letterSpacing: -0.6,
+    lineHeight: 35,
+    color: '#FFFFFF',
+    textAlign: 'left',
   },
-  slideBody: {
+  subtitleText: {
     fontFamily: 'System',
     fontSize: 14,
-    lineHeight: 22,
-    textAlign: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 10,
+    lineHeight: 20,
+    color: '#A1A1AA',
+    textAlign: 'left',
+    marginTop: 6,
+    maxWidth: 320,
   },
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    gap: 20,
+  floatingFooter: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    bottom: 0,
+    alignItems: 'center',
+    zIndex: 20,
   },
-  progressRow: {
-    flexDirection: 'row',
+  secondaryLink: {
+    height: 26,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    height: 8,
+    marginBottom: 8,
   },
-  progressPill: {
-    width: 24,
-    height: 2,
+  secondaryLinkPlaceholder: {
+    height: 26,
+    marginBottom: 8,
   },
-  ctaButton: {
-    width: '100%',
-    height: 52,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaButtonPressed: {
-    opacity: 0.8,
-  },
-  ctaButtonText: {
+  secondaryLinkText: {
     fontFamily: 'System',
     fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.8,
+    fontWeight: '500',
+    color: '#71717A',
   },
   pressed: {
-    opacity: 0.6,
+    opacity: 0.65,
   },
 });
 
 OnboardingScreen.displayName = 'OnboardingScreen';
-ProgressPill.displayName = 'ProgressPill';
-

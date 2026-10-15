@@ -15,7 +15,7 @@ Focal is a high-performance, minimalist mobile productivity application engineer
   <img src="https://img.shields.io/badge/Expo_SDK_57-000020?style=for-the-badge&logo=expo&logoColor=white" alt="Expo" />
   <img src="https://img.shields.io/badge/TypeScript_Strict-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Reanimated_4-0A84FF?style=for-the-badge&logo=speedtest&logoColor=white" alt="Reanimated" />
-  <img src="https://img.shields.io/badge/MMKV_Storage-4B0082?style=for-the-badge&logo=sqlite&logoColor=white" alt="MMKV" />
+  <img src="https://img.shields.io/badge/Async_Storage_L1_Cache-4B0082?style=for-the-badge&logo=sqlite&logoColor=white" alt="AsyncStorage" />
   <img src="https://img.shields.io/badge/Apple_Haptics-333333?style=for-the-badge&logo=apple&logoColor=white" alt="Haptics" />
   <img src="https://img.shields.io/badge/Procedural_Audio-00C7BE?style=for-the-badge&logo=airplayaudio&logoColor=white" alt="Audio Engine" />
 </p>
@@ -140,7 +140,7 @@ focal/
 │   ├── lib/
 │   │   └── utils.ts           # Class merge and style utilities
 │   ├── notifications/         # Multi-platform notification scheduler (native & web)
-│   ├── storage/               # MMKV and Web local persistence drivers
+│   ├── storage/               # AsyncStorage + in-memory L1 cache persistence drivers
 │   └── theme/
 │       └── colors.ts          # Apple dark mode surface hierarchy tokens
 ├── App.tsx                    # Root application entry & coordinator

@@ -88,7 +88,7 @@ export function useFocusTimer({
   durationUnit,
   notificationsEnabled,
   hapticsEnabled,
-  soundAlertTone = 'clarity',
+  soundAlertTone = 'crystal',
   pomodoroEnabled = false,
   pomodoroCycle: externalPomodoroCycle = 1,
   pomodoroShortBreakMinutes = 5,

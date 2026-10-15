@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
 export type DurationUnit = 'minutes' | 'seconds';
-export type SoundAlertTone = 'clarity' | 'tibetan' | 'mechanical';
+export type SoundAlertTone = 'crystal' | 'aurora' | 'clarity' | 'tibetan' | 'mechanical';
 export type PomodoroStage = 'focus' | 'shortBreak' | 'longBreak';
 
 export type FocusPreferences = {
@@ -44,25 +44,14 @@ const defaults: FocusPreferences = {
   pomodoroCycle: 1,
   pomodoroShortBreakMinutes: 5,
   pomodoroLongBreakMinutes: 15,
-  soundAlertTone: 'clarity',
+  soundAlertTone: 'crystal',
 };
 
 const memoryCache = new Map<string, string>();
+let initPromise: Promise<FocusPreferences> | null = null;
+let writeQueue: Promise<void> = Promise.resolve();
 
-// Pre-populate memory cache from AsyncStorage on app launch
-void AsyncStorage.multiGet([STORAGE_KEY, LEGACY_STORAGE_KEY])
-  .then((stores) => {
-    stores.forEach(([key, value]) => {
-      if (value) {
-        memoryCache.set(key, value);
-      }
-    });
-  })
-  .catch(() => {});
-
-export function loadPreferences(): FocusPreferences {
-  const serialized = memoryCache.get(STORAGE_KEY) ?? memoryCache.get(LEGACY_STORAGE_KEY);
-
+function parseAndValidatePreferences(serialized: string | null | undefined): FocusPreferences {
   if (!serialized) {
     return defaults;
   }
@@ -107,19 +96,58 @@ export function loadPreferences(): FocusPreferences {
           ? Math.min(120, Math.max(1, Math.round(parsed.pomodoroLongBreakMinutes)))
           : 15,
       soundAlertTone:
-        parsed.soundAlertTone === 'tibetan' || parsed.soundAlertTone === 'mechanical'
+        parsed.soundAlertTone === 'crystal' ||
+        parsed.soundAlertTone === 'aurora' ||
+        parsed.soundAlertTone === 'clarity' ||
+        parsed.soundAlertTone === 'tibetan' ||
+        parsed.soundAlertTone === 'mechanical'
           ? parsed.soundAlertTone
-          : 'clarity',
+          : defaults.soundAlertTone,
     };
   } catch {
     return defaults;
   }
 }
 
+export function initPreferences(): Promise<FocusPreferences> {
+  if (initPromise) {
+    return initPromise;
+  }
+
+  initPromise = (async () => {
+    try {
+      const stores = await AsyncStorage.multiGet([STORAGE_KEY, LEGACY_STORAGE_KEY]);
+      stores.forEach(([key, value]) => {
+        if (value) {
+          memoryCache.set(key, value);
+        }
+      });
+      const serialized = memoryCache.get(STORAGE_KEY) ?? memoryCache.get(LEGACY_STORAGE_KEY);
+      return parseAndValidatePreferences(serialized);
+    } catch {
+      return defaults;
+    }
+  })();
+
+  return initPromise;
+}
+
+// Kick off early load in background
+void initPreferences();
+
+export function loadPreferences(): FocusPreferences {
+  const serialized = memoryCache.get(STORAGE_KEY) ?? memoryCache.get(LEGACY_STORAGE_KEY);
+  return parseAndValidatePreferences(serialized);
+}
+
 export function savePreferences(preferences: FocusPreferences): void {
   const serialized = JSON.stringify(preferences);
   memoryCache.set(STORAGE_KEY, serialized);
 
-  // Asynchronously persist to persistent storage
-  void AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => {});
+  // Serialize persistent async writes to prevent concurrent write tear
+  writeQueue = writeQueue
+    .then(async () => {
+      await AsyncStorage.setItem(STORAGE_KEY, serialized);
+    })
+    .catch(() => {});
 }

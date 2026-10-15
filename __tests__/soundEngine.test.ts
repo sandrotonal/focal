@@ -7,6 +7,8 @@ import {
   playBreakCompleteSound,
   previewToneSound,
   playResetSound,
+  preloadNativeSounds,
+  preloadToneSound,
   cleanupAudioEngine,
 } from '../src/audio/soundEngine';
 
@@ -35,11 +37,13 @@ describe('Sound Engine', () => {
     expect(() => {
       playTickSound();
       playFocusStartSound();
+      playFocusCompleteSound('crystal');
+      playFocusCompleteSound('aurora');
       playFocusCompleteSound('clarity');
       playFocusCompleteSound('tibetan');
       playFocusCompleteSound('mechanical');
       playBreakCompleteSound();
-      previewToneSound('tibetan');
+      previewToneSound('crystal');
       playResetSound();
     }).not.toThrow();
   });
@@ -50,12 +54,23 @@ describe('Sound Engine', () => {
     expect(() => {
       playTickSound();
       playFocusStartSound();
+      playFocusCompleteSound('crystal');
+      playFocusCompleteSound('aurora');
       playFocusCompleteSound('clarity');
       playFocusCompleteSound('tibetan');
       playFocusCompleteSound('mechanical');
       playBreakCompleteSound();
-      previewToneSound('mechanical');
+      previewToneSound('aurora');
       playResetSound();
+    }).not.toThrow();
+  });
+
+  test('should handle preloading functions without throwing', () => {
+    expect(() => {
+      preloadNativeSounds('crystal');
+      preloadNativeSounds('aurora');
+      preloadToneSound('tibetan');
+      preloadToneSound('mechanical');
     }).not.toThrow();
   });
 

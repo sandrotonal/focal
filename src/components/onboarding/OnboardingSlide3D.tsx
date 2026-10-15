@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, {
+  Extrapolation,
   interpolate,
   useAnimatedStyle,
 } from 'react-native-reanimated';
@@ -24,31 +25,39 @@ export const OnboardingSlide3D: React.FC<Props> = React.memo(function Onboarding
   const containerStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
-    const opacity = interpolate(scrollX.value, inputRange, [0.2, 1, 0.2]);
-    const scale = reducedMotion ? 1 : interpolate(scrollX.value, inputRange, [0.88, 1, 0.88]);
-    const translateX = interpolate(scrollX.value, inputRange, [-36, 0, 36]);
-    const rotateY = reducedMotion
-      ? '0deg'
-      : `${interpolate(scrollX.value, inputRange, [24, 0, -24])}deg`;
-    const rotateZ = reducedMotion
-      ? '0deg'
-      : `${interpolate(scrollX.value, inputRange, [-3, 0, 3])}deg`;
+    const opacity = interpolate(
+      scrollX.value,
+      inputRange,
+      [0.35, 1, 0.35],
+      Extrapolation.CLAMP
+    );
+    const scale = reducedMotion
+      ? 1
+      : interpolate(
+          scrollX.value,
+          inputRange,
+          [0.96, 1, 0.96],
+          Extrapolation.CLAMP
+        );
+    const translateX = interpolate(
+      scrollX.value,
+      inputRange,
+      [-16, 0, 16],
+      Extrapolation.CLAMP
+    );
 
     return {
       opacity,
       transform: [
-        { perspective: 1200 },
         { translateX },
         { scale },
-        { rotateY },
-        { rotateZ },
       ],
     };
   });
 
   return (
     <Animated.View style={[styles.slide, { width }, containerStyle]}>
-      <View style={styles.contentWrapper}>{children}</View>
+      {children}
     </Animated.View>
   );
 });
@@ -56,16 +65,8 @@ export const OnboardingSlide3D: React.FC<Props> = React.memo(function Onboarding
 const styles = StyleSheet.create({
   slide: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  contentWrapper: {
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
+    overflow: 'hidden',
   },
 });
 
 OnboardingSlide3D.displayName = 'OnboardingSlide3D';
-

@@ -50,11 +50,15 @@ export interface TranslationSchema {
       soundAlertTone: string;
       soundAlertToneSubtitle: string;
       soundTones: {
+        crystal: string;
+        aurora: string;
         clarity: string;
         tibetan: string;
         mechanical: string;
       };
       soundToneSubtitles: {
+        crystal: string;
+        aurora: string;
         clarity: string;
         tibetan: string;
         mechanical: string;
@@ -116,31 +120,47 @@ export interface TranslationSchema {
     ariaHint: string;
   };
   onboarding: {
+    skip: string;
+    notNow: string;
+    skipForNow: string;
+    continue: string;
+    start: string;
+    allowNotifications: string;
     slide1: {
-      eyebrow: string;
       title: string;
       body: string;
-      tag: string;
     };
     slide2: {
-      eyebrow: string;
       title: string;
       body: string;
+      recommended: string;
       pomodoro: { label: string; subtitle: string };
       deepWork: { label: string; subtitle: string };
       flowState: { label: string; subtitle: string };
       ultraSprint: { label: string; subtitle: string };
     };
     slide3: {
-      eyebrow: string;
       title: string;
       body: string;
+      buttonEnable: string;
+      enabledBadge: string;
+      loading: string;
+      benefit: string;
+    };
+    slide4: {
+      title: string;
+      body: string;
+      summaryTitle: string;
+      dailyCadence: string;
+      sessionLabel: string;
+      dailyGoalLabel: string;
       notifications: string;
-      notificationsCaption: string;
       haptics: string;
-      hapticsCaption: string;
       sound: string;
-      soundCaption: string;
+      statusActive: string;
+      statusInactive: string;
+      statusOn: string;
+      statusOff: string;
     };
   };
   notifications: {
@@ -206,14 +226,18 @@ export const translations: Record<Language, TranslationSchema> = {
         soundAlertTone: 'Bitiş Tonu',
         soundAlertToneSubtitle: 'Rezonans karakteri',
         soundTones: {
+          crystal: 'Kristal Çan',
+          aurora: 'Kutup Işığı',
           clarity: 'Marimba',
           tibetan: 'Zen Çanı',
-          mechanical: 'Kristal',
+          mechanical: 'Mekanik Tık',
         },
         soundToneSubtitles: {
+          crystal: '3 yükselen kristal tınısı',
+          aurora: 'Huzurlu eterik armoni',
           clarity: 'Sıcak ahşap akoru',
-          tibetan: 'Huzurlu meditasyon kasesi',
-          mechanical: 'Berrak hava ışıltısı',
+          tibetan: '528Hz meditasyon kasesi',
+          mechanical: 'Hassas kronometre darbesi',
         },
         pomodoroPlan: {
           title: 'RİTİM PLANI',
@@ -273,31 +297,47 @@ export const translations: Record<Language, TranslationSchema> = {
       ariaHint: 'Başlatmak veya duraklatmak için dokunun. Aşağı çekerek sıfırlayabilirsiniz.',
     },
     onboarding: {
+      skip: 'Atla',
+      notNow: 'Şimdi değil',
+      skipForNow: 'Şimdi geç',
+      continue: 'Devam et',
+      start: 'Odaklanmaya başla',
+      allowNotifications: 'Bildirimlere izin ver',
       slide1: {
-        eyebrow: '01 // ODAK ÇEKİRDEĞİ',
-        title: 'Zihnini topla.',
-        body: 'Bölünmelerden arınmış minimalist alan. Zamanı başlat ve sadece önündeki tek bir göreve odaklan.',
-        tag: 'ODAK PROTOKOLÜ',
+        title: 'Bölünmeden çalış.',
+        body: 'Reklamsız, hesapsız, tamamen çevrimdışı odak zamanlayıcısı.',
       },
       slide2: {
-        eyebrow: '02 // ÇALIŞMA RİTMİ',
-        title: 'Kişisel ritmini seç.',
-        body: 'Kısa sprint mi, yoksa kesintisiz derin bir çalışma bloğu mu? Seans uzunluğunu belirle.',
-        pomodoro: { label: 'Pomodoro', subtitle: 'Kısa sprint & yüksek momentum' },
-        deepWork: { label: 'Deep Work', subtitle: 'Yoğun zihinsel odak bloğu' },
-        flowState: { label: 'Flow State', subtitle: 'Kesintisiz tek akış seansı' },
-        ultraSprint: { label: 'Ultra Sprint', subtitle: 'Maksimum dayanıklılık turu' },
+        title: 'Ne kadar odaklanabilirsin?',
+        body: 'Sana en uygun seans süresini seç.',
+        recommended: 'Önerilen',
+        pomodoro: { label: 'Pomodoro', subtitle: 'Kısa sprint ve yüksek momentum' },
+        deepWork: { label: 'Derin Çalışma', subtitle: 'Yoğun zihinsel odak bloğu' },
+        flowState: { label: 'Akış Hali', subtitle: 'Kesintisiz tek akış seansı' },
+        ultraSprint: { label: 'Uzun Seans', subtitle: 'Maksimum zihinsel dayanıklılık' },
       },
       slide3: {
-        eyebrow: '03 // GERİ BİLDİRİM',
-        title: 'Duyusal uyarılar.',
-        body: 'Seans bitişini kaçırmaman için taptic motor, bildirimler ve akustik tonları yapılandır.',
+        title: 'Seans bitince haber verelim.',
+        body: 'Sadece seans bittiğinde bildirim göndeririz. Dikkat dağıtan hiçbir reklam veya gereksiz uyarı yok.',
+        buttonEnable: 'Bildirimlere izin ver',
+        enabledBadge: 'Bildirimler Etkin',
+        loading: 'İzin Bekleniyor...',
+        benefit: 'Zamanlayıcı tamamlandığında tek bir sessiz uyarı alırsın.',
+      },
+      slide4: {
+        title: 'Her şey hazır.',
+        body: 'Kişisel odak planın oluşturuldu.',
+        summaryTitle: 'Kişisel Odak Planı',
+        dailyCadence: 'Günde 1 Seans',
+        sessionLabel: 'SEANS',
+        dailyGoalLabel: 'GÜNLÜK HEDEF',
         notifications: 'Bitiş Bildirimi',
-        notificationsCaption: 'Zaman dolduğunda sessiz sistem uyarısı',
-        haptics: 'Haptik Titreşim',
-        hapticsCaption: 'Apple Taptic motor ile dokunsal temas',
-        sound: 'Akustik Efektler',
-        soundCaption: '528Hz & 432Hz saf meditasyon tonları',
+        haptics: 'Titreşim',
+        sound: 'Ses Efekti',
+        statusActive: 'Açık',
+        statusInactive: 'Kapalı',
+        statusOn: 'Açık',
+        statusOff: 'Kapalı',
       },
     },
     notifications: {
@@ -361,14 +401,18 @@ export const translations: Record<Language, TranslationSchema> = {
         soundAlertTone: 'Alert Tone',
         soundAlertToneSubtitle: 'Resonance character',
         soundTones: {
+          crystal: 'Crystal Chime',
+          aurora: 'Aurora Chime',
           clarity: 'Marimba',
-          tibetan: 'Zen Bell',
-          mechanical: 'Crystal',
+          tibetan: 'Zen Gong',
+          mechanical: 'Mechanical Click',
         },
         soundToneSubtitles: {
-          clarity: 'Warm wood triad',
-          tibetan: 'Mindful singing bowl',
-          mechanical: 'Airy crystal shimmer',
+          crystal: '3 ascending crystal glass notes',
+          aurora: 'Tranquil ethereal harmony',
+          clarity: 'Warm rosewood triad',
+          tibetan: '528Hz meditation bowl',
+          mechanical: 'Precision chronometer impulse',
         },
         pomodoroPlan: {
           title: 'RHYTHM PLAN',
@@ -428,31 +472,47 @@ export const translations: Record<Language, TranslationSchema> = {
       ariaHint: 'Tap to start or pause. Pull down to reset the session.',
     },
     onboarding: {
+      skip: 'Skip',
+      notNow: 'Not now',
+      skipForNow: 'Skip for now',
+      continue: 'Continue',
+      start: 'Start focusing',
+      allowNotifications: 'Allow notifications',
       slide1: {
-        eyebrow: '01 // FOCUS CORE',
-        title: 'Gather your mind.',
-        body: 'A distraction-free minimalist space. Start the clock and immerse in a single priority.',
-        tag: 'FOCUS PROTOCOL',
+        title: 'Work uninterrupted.',
+        body: 'An ad-free, account-free, fully offline focus timer.',
       },
       slide2: {
-        eyebrow: '02 // FOCUS RHYTHM',
-        title: 'Choose your rhythm.',
-        body: 'A quick sprint or an uninterrupted deep work block? Define your session length.',
-        pomodoro: { label: 'Pomodoro', subtitle: 'Quick sprint & high momentum' },
+        title: 'How long can you focus?',
+        body: 'Pick a session length that suits your rhythm.',
+        recommended: 'Recommended',
+        pomodoro: { label: 'Pomodoro', subtitle: 'Short sprint & high momentum' },
         deepWork: { label: 'Deep Work', subtitle: 'Intense cognitive focus block' },
         flowState: { label: 'Flow State', subtitle: 'Unbroken single flow session' },
-        ultraSprint: { label: 'Ultra Sprint', subtitle: 'Maximum endurance interval' },
+        ultraSprint: { label: 'Long Session', subtitle: 'Maximum cognitive endurance' },
       },
       slide3: {
-        eyebrow: '03 // SENSORY FEEDBACK',
-        title: 'Sensory alerts.',
-        body: 'Configure the taptic engine, notifications, and acoustic tones so you never miss a transition.',
+        title: "We'll let you know when time is up.",
+        body: 'We only send a notification when your session finishes. Zero ads, zero marketing, zero distractions.',
+        buttonEnable: 'Allow notifications',
+        enabledBadge: 'Notifications Enabled',
+        loading: 'Requesting Permission...',
+        benefit: 'Get a gentle, quiet chime right when your focus timer finishes.',
+      },
+      slide4: {
+        title: 'Everything is set.',
+        body: 'Your personalized focus setup is ready.',
+        summaryTitle: 'Your Focus Plan',
+        dailyCadence: '1 Session Daily',
+        sessionLabel: 'SESSION',
+        dailyGoalLabel: 'DAILY GOAL',
         notifications: 'Completion Alert',
-        notificationsCaption: 'Silent system alert when time expires',
-        haptics: 'Haptic Vibration',
-        hapticsCaption: 'Tactile touch via Apple Taptic motor',
-        sound: 'Acoustic Effects',
-        soundCaption: '528Hz & 432Hz pure meditation tones',
+        haptics: 'Haptics',
+        sound: 'Sound Effects',
+        statusActive: 'On',
+        statusInactive: 'Off',
+        statusOn: 'On',
+        statusOff: 'Off',
       },
     },
     notifications: {

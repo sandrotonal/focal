@@ -6,7 +6,7 @@ export const COLORS = {
     panel: '#17181C',
     primary: '#F5F5F7',
     secondary: '#B5B6BF',
-    muted: '#747681',
+    muted: '#8E909B',
     hairline: '#25272D',
     accent: '#0A84FF',
     scrim: 'rgba(0, 0, 0, 0.68)',
