@@ -59,9 +59,11 @@ describe('preferencesStorage (web)', () => {
       totalFocusMinutes: 400,
       pomodoroEnabled: true,
       pomodoroCycle: 3,
+      pomodoroFocusMinutes: 25,
       pomodoroShortBreakMinutes: 5,
       pomodoroLongBreakMinutes: 15,
       soundAlertTone: 'tibetan',
+      weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
     };
 
     savePreferences(updated);

@@ -31,4 +31,10 @@ describe('formatElapsed', () => {
     expect(formatElapsed(3665)).toBe('01:01:05');
     expect(formatElapsed(7325)).toBe('02:02:05');
   });
+
+  test('safely handles negative numbers, NaN and floats', () => {
+    expect(formatElapsed(-10)).toBe('00:00');
+    expect(formatElapsed(Number.NaN)).toBe('00:00');
+    expect(formatElapsed(65.8)).toBe('01:05');
+  });
 });

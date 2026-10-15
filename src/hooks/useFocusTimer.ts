@@ -13,13 +13,14 @@ import {
   cancelFocusCompletion,
   scheduleFocusCompletion,
 } from '../notifications/notifications';
-import { loadTimerState, saveTimerState } from '../storage/timerStorage';
+import { initTimerStorage, loadTimerState, saveTimerState } from '../storage/timerStorage';
 import type { DurationUnit, PomodoroStage, SoundAlertTone } from '../storage/preferencesStorage';
 
 export function formatElapsed(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+  const safeSeconds = Math.max(0, Math.floor(Number.isFinite(totalSeconds) ? totalSeconds : 0));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
 
   if (hours > 0) {
     return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, '0')).join(':');
@@ -37,6 +38,7 @@ export type UseFocusTimerOptions = {
   soundAlertTone?: SoundAlertTone;
   pomodoroEnabled?: boolean;
   pomodoroCycle?: number;
+  pomodoroFocusMinutes?: number;
   pomodoroShortBreakMinutes?: number;
   pomodoroLongBreakMinutes?: number;
   notificationTitle: string;
@@ -51,13 +53,30 @@ function getInitialTimerState(initialCycle = 1) {
   try {
     const persisted = loadTimerState();
     const now = Date.now();
-    const restoredElapsed = persisted.isRunning && persisted.startedAt
+    const isRunning = persisted.isRunning === true;
+
+    // If timer was saved while not running, always start clean at focus stage
+    if (!isRunning) {
+      return {
+        elapsed: 0,
+        isRunning: false,
+        startedAt: null,
+        scheduledNotificationId: null,
+        timerMode: 'focus' as PomodoroStage,
+        pomodoroCycle:
+          typeof persisted.pomodoroCycle === 'number'
+            ? Math.min(4, Math.max(1, Math.round(persisted.pomodoroCycle)))
+            : initialCycle,
+      };
+    }
+
+    const restoredElapsed = persisted.startedAt
       ? persisted.elapsed + Math.floor((now - persisted.startedAt) / 1000)
       : persisted.elapsed;
 
     return {
       elapsed: restoredElapsed,
-      isRunning: persisted.isRunning,
+      isRunning: true,
       startedAt: persisted.startedAt,
       scheduledNotificationId: persisted.scheduledNotificationId,
       timerMode:
@@ -91,6 +110,7 @@ export function useFocusTimer({
   soundAlertTone = 'crystal',
   pomodoroEnabled = false,
   pomodoroCycle: externalPomodoroCycle = 1,
+  pomodoroFocusMinutes = 25,
   pomodoroShortBreakMinutes = 5,
   pomodoroLongBreakMinutes = 15,
   notificationTitle,
@@ -104,6 +124,8 @@ export function useFocusTimer({
   const [elapsed, setElapsed] = useState(initialState.elapsed);
   const [isRunning, setIsRunning] = useState(initialState.isRunning);
   const [showCompletion, setShowCompletion] = useState(false);
+  const [lastCompletedStage, setLastCompletedStage] = useState<PomodoroStage | null>(null);
+  const [completedCycle, setCompletedCycle] = useState(externalPomodoroCycle);
   const [timerMode, setTimerMode] = useState<PomodoroStage>(initialState.timerMode);
   const [pomodoroCycle, setPomodoroCycle] = useState(initialState.pomodoroCycle);
 
@@ -113,32 +135,7 @@ export function useFocusTimer({
   const scheduledNotificationIdRef = useRef<string | null>(initialState.scheduledNotificationId);
   const timerModeRef = useRef<PomodoroStage>(initialState.timerMode);
   const cycleRef = useRef(initialState.pomodoroCycle);
-
-  // Sync external cycle changes if timer is idle
-  useEffect(() => {
-    if (!runningRef.current && externalPomodoroCycle !== cycleRef.current) {
-      cycleRef.current = externalPomodoroCycle;
-      setPomodoroCycle(externalPomodoroCycle);
-    }
-  }, [externalPomodoroCycle]);
-
-  // If Pomodoro is disabled, always return to focus stage
-  useEffect(() => {
-    if (!pomodoroEnabled && timerModeRef.current !== 'focus') {
-      timerModeRef.current = 'focus';
-      setTimerMode('focus');
-      elapsedRef.current = 0;
-      setElapsed(0);
-      saveTimerState({
-        elapsed: 0,
-        isRunning: runningRef.current,
-        startedAt: startedAtRef.current,
-        scheduledNotificationId: scheduledNotificationIdRef.current,
-        timerMode: 'focus',
-        pomodoroCycle: cycleRef.current,
-      });
-    }
-  }, [pomodoroEnabled]);
+  const prevPomodoroEnabledRef = useRef(pomodoroEnabled);
 
   // Target duration dynamically based on current interval stage
   const effectiveTargetSeconds = useMemo(() => {
@@ -146,15 +143,15 @@ export function useFocusTimer({
       return targetDurationSeconds;
     }
     if (timerMode === 'shortBreak') {
-      return durationUnit === 'seconds' ? pomodoroShortBreakMinutes : pomodoroShortBreakMinutes * 60;
+      return pomodoroShortBreakMinutes * 60;
     }
     if (timerMode === 'longBreak') {
-      return durationUnit === 'seconds' ? pomodoroLongBreakMinutes : pomodoroLongBreakMinutes * 60;
+      return pomodoroLongBreakMinutes * 60;
     }
-    return targetDurationSeconds;
+    return pomodoroFocusMinutes * 60;
   }, [
-    durationUnit,
     pomodoroEnabled,
+    pomodoroFocusMinutes,
     pomodoroLongBreakMinutes,
     pomodoroShortBreakMinutes,
     targetDurationSeconds,
@@ -174,6 +171,76 @@ export function useFocusTimer({
       void cancelFocusCompletion(identifier);
     }
   }, []);
+
+  // Sync external cycle changes if timer is idle
+  useEffect(() => {
+    if (!runningRef.current && externalPomodoroCycle !== cycleRef.current) {
+      cycleRef.current = externalPomodoroCycle;
+      setPomodoroCycle(externalPomodoroCycle);
+    }
+  }, [externalPomodoroCycle]);
+
+  // Clean reset when toggling Pomodoro mode on or off
+  useEffect(() => {
+    if (prevPomodoroEnabledRef.current !== pomodoroEnabled) {
+      prevPomodoroEnabledRef.current = pomodoroEnabled;
+
+      clearScheduledCompletion();
+      elapsedRef.current = 0;
+      runningRef.current = false;
+      startedAtRef.current = null;
+      timerModeRef.current = 'focus';
+      setElapsed(0);
+      setIsRunning(false);
+      setTimerMode('focus');
+      setShowCompletion(false);
+      setLastCompletedStage(null);
+
+      saveTimerState({
+        elapsed: 0,
+        isRunning: false,
+        startedAt: null,
+        scheduledNotificationId: null,
+        timerMode: 'focus',
+        pomodoroCycle: cycleRef.current,
+      });
+    }
+  }, [clearScheduledCompletion, pomodoroEnabled]);
+
+  // Hydrate timer state on native cold start if asynchronous storage was still resolving during initial mount
+  useEffect(() => {
+    let isMounted = true;
+    void initTimerStorage().then((persisted) => {
+      if (!isMounted) return;
+      if (!runningRef.current && elapsedRef.current === 0 && persisted.isRunning && persisted.startedAt) {
+        const now = Date.now();
+        const restoredElapsed = persisted.elapsed + Math.floor((now - persisted.startedAt) / 1000);
+        elapsedRef.current = restoredElapsed;
+        runningRef.current = true;
+        startedAtRef.current = persisted.startedAt;
+        scheduledNotificationIdRef.current = persisted.scheduledNotificationId;
+        timerModeRef.current = persisted.timerMode ?? 'focus';
+        cycleRef.current = persisted.pomodoroCycle ?? 1;
+
+        setElapsed(restoredElapsed);
+        setIsRunning(true);
+        setTimerMode(persisted.timerMode ?? 'focus');
+        setPomodoroCycle(persisted.pomodoroCycle ?? 1);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Reset elapsed if idle and external duration was reduced below current elapsed
+  useEffect(() => {
+    if (!runningRef.current && elapsedRef.current >= effectiveTargetSeconds) {
+      elapsedRef.current = 0;
+      setElapsed(0);
+    }
+  }, [effectiveTargetSeconds]);
 
   const scheduleCompletion = useCallback(async (enabled = notificationsEnabled) => {
     clearScheduledCompletion();
@@ -223,14 +290,17 @@ export function useFocusTimer({
     startedAtRef.current = null;
     setElapsed(0);
     setIsRunning(false);
+    setLastCompletedStage(currentMode);
+    setCompletedCycle(currentCycle);
     setShowCompletion(true);
 
     let nextMode: PomodoroStage = 'focus';
     let nextCycle = currentCycle;
 
     if (currentMode === 'focus') {
-      const minutesToAdd =
-        durationUnit === 'seconds'
+      const minutesToAdd = pomodoroEnabled
+        ? pomodoroFocusMinutes
+        : durationUnit === 'seconds'
           ? Math.max(1, Math.round(sessionSeconds / 60))
           : sessionMinutes;
       onSessionComplete(minutesToAdd);
@@ -277,6 +347,7 @@ export function useFocusTimer({
     onPomodoroCycleChange,
     onSessionComplete,
     pomodoroEnabled,
+    pomodoroFocusMinutes,
     sessionMinutes,
     sessionSeconds,
     soundAlertTone,
@@ -394,15 +465,19 @@ export function useFocusTimer({
     elapsedRef.current = 0;
     runningRef.current = false;
     startedAtRef.current = null;
+    timerModeRef.current = 'focus';
     setElapsed(0);
     setIsRunning(false);
+    setTimerMode('focus');
     setShowCompletion(false);
+    setLastCompletedStage(null);
+
     saveTimerState({
       elapsed: 0,
       isRunning: false,
       startedAt: null,
       scheduledNotificationId: null,
-      timerMode: timerModeRef.current,
+      timerMode: 'focus',
       pomodoroCycle: cycleRef.current,
     });
 
@@ -442,6 +517,8 @@ export function useFocusTimer({
     startedAtRef.current = null;
     setElapsed(0);
     setIsRunning(false);
+    setShowCompletion(false);
+    setLastCompletedStage(null);
 
     saveTimerState({
       elapsed: 0,
@@ -473,6 +550,8 @@ export function useFocusTimer({
     elapsed,
     isRunning,
     showCompletion,
+    lastCompletedStage,
+    completedCycle,
     progress,
     elapsedText,
     timerMode,

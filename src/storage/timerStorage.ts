@@ -1,4 +1,4 @@
 // TypeScript's platform-neutral fallback. Metro prefers .native.ts or .web.ts
 // at runtime so native builds keep AsyncStorage out of the web bundle.
-export { loadTimerState, saveTimerState } from './timerStorage.web';
+export { initTimerStorage, loadTimerState, saveTimerState } from './timerStorage.web';
 export type { TimerState } from './timerStorage.web';

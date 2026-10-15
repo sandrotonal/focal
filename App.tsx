@@ -34,6 +34,7 @@ import { usePreferences } from './src/hooks/usePreferences';
 import { useFocusTimer } from './src/hooks/useFocusTimer';
 import { playFocusStartSound, playTickSound } from './src/audio/soundEngine';
 import { translations } from './src/i18n/translations';
+import type { DurationUnit } from './src/storage/preferencesStorage';
 
 const RESET_THRESHOLD = 112;
 const FLICK_THRESHOLD = -56;
@@ -66,9 +67,11 @@ function FocusEngineScreen() {
     totalFocusMinutes,
     pomodoroEnabled,
     pomodoroCycle,
+    pomodoroFocusMinutes,
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     soundAlertTone,
+    weeklyHistory,
     handleChangeDurationUnit,
     handleThemeChange,
     handleToggleLanguage,
@@ -78,6 +81,7 @@ function FocusEngineScreen() {
     handleTogglePomodoro,
     handleSelectSoundTone,
     setPomodoroCycle,
+    setPomodoroFocusMinutes,
     setPomodoroShortBreakMinutes,
     setPomodoroLongBreakMinutes,
     setPomodoroPreset,
@@ -97,6 +101,8 @@ function FocusEngineScreen() {
     elapsed,
     isRunning,
     showCompletion,
+    lastCompletedStage,
+    completedCycle,
     progress,
     elapsedText,
     timerMode,
@@ -117,6 +123,7 @@ function FocusEngineScreen() {
     soundAlertTone,
     pomodoroEnabled,
     pomodoroCycle,
+    pomodoroFocusMinutes,
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     notificationTitle: t.notifications.title,
@@ -128,6 +135,16 @@ function FocusEngineScreen() {
   });
 
   const isBreak = timerMode === 'shortBreak' || timerMode === 'longBreak';
+
+  const topMetaTitle = useMemo(() => {
+    if (pomodoroEnabled && timerMode === 'shortBreak') {
+      return t.mainTimer.stageShortBreak;
+    }
+    if (pomodoroEnabled && timerMode === 'longBreak') {
+      return t.mainTimer.stageLongBreak;
+    }
+    return t.mainTimer.focus;
+  }, [pomodoroEnabled, t, timerMode]);
 
   const stageLabel = useMemo(() => {
     if (!pomodoroEnabled) return undefined;
@@ -154,12 +171,17 @@ function FocusEngineScreen() {
     if (pomodoroEnabled && timerMode === 'longBreak') {
       return `${pomodoroLongBreakMinutes} ${t.common.minuteShort}`;
     }
+    if (pomodoroEnabled) {
+      return `${pomodoroFocusMinutes} ${t.common.minuteShort} // ${t.mainTimer.cycleBadge(currentTimerCycle, 4)}`;
+    }
     return durationUnit === 'seconds'
       ? `${sessionSeconds} ${t.common.secondShort}`
       : `${sessionMinutes} ${t.common.minuteShort}`;
   }, [
+    currentTimerCycle,
     durationUnit,
     pomodoroEnabled,
+    pomodoroFocusMinutes,
     pomodoroLongBreakMinutes,
     pomodoroShortBreakMinutes,
     sessionMinutes,
@@ -169,18 +191,72 @@ function FocusEngineScreen() {
   ]);
 
   const completionTitle = useMemo(() => {
-    if (!pomodoroEnabled) return t.mainTimer.sessionCompleted;
-    if (timerMode === 'shortBreak') return t.notifications.pomodoroShortBreakTitle;
-    if (timerMode === 'longBreak') return t.notifications.pomodoroLongBreakTitle;
+    if (!lastCompletedStage) {
+      return t.mainTimer.sessionCompleted;
+    }
+    if (lastCompletedStage === 'focus') {
+      if (!pomodoroEnabled) {
+        return t.mainTimer.sessionCompleted;
+      }
+      return completedCycle >= 4
+        ? t.notifications.pomodoroLongBreakTitle
+        : t.notifications.pomodoroShortBreakTitle;
+    }
     return t.notifications.breakTitle;
-  }, [pomodoroEnabled, t, timerMode]);
+  }, [completedCycle, lastCompletedStage, pomodoroEnabled, t]);
 
   const completionBody = useMemo(() => {
-    if (!pomodoroEnabled) return t.mainTimer.sessionCompletedDesc;
-    if (timerMode === 'shortBreak') return t.notifications.pomodoroShortBreakBody;
-    if (timerMode === 'longBreak') return t.notifications.pomodoroLongBreakBody;
+    if (!lastCompletedStage) {
+      return t.mainTimer.sessionCompletedDesc;
+    }
+    if (lastCompletedStage === 'focus') {
+      if (!pomodoroEnabled) {
+        return t.mainTimer.sessionCompletedDesc;
+      }
+      if (completedCycle >= 4) {
+        return language === 'tr'
+          ? `Mükemmel disiplin! ${pomodoroLongBreakMinutes} dakikalık uzun mola zamanı.`
+          : `Outstanding discipline! Time for a ${pomodoroLongBreakMinutes}-minute long break.`;
+      }
+      return language === 'tr'
+        ? `Tebrikler! ${pomodoroShortBreakMinutes} dakikalık kısa dinlenme zamanı.`
+        : `Well done! Time for a ${pomodoroShortBreakMinutes}-minute short rest.`;
+    }
     return t.notifications.breakBody;
-  }, [pomodoroEnabled, t, timerMode]);
+  }, [
+    completedCycle,
+    language,
+    lastCompletedStage,
+    pomodoroEnabled,
+    pomodoroLongBreakMinutes,
+    pomodoroShortBreakMinutes,
+    t,
+  ]);
+
+  const bannerActionText = useMemo(() => {
+    if (lastCompletedStage === 'focus' && pomodoroEnabled) {
+      return language === 'tr' ? 'Molayı Başlat' : 'Start Break';
+    }
+    return t.mainTimer.newSession;
+  }, [language, lastCompletedStage, pomodoroEnabled, t]);
+
+  const handleBannerAction = useCallback(() => {
+    dismissCompletion();
+    if (lastCompletedStage === 'focus' && pomodoroEnabled) {
+      toggleTimer();
+    } else {
+      resetTimer();
+    }
+  }, [dismissCompletion, lastCompletedStage, pomodoroEnabled, resetTimer, toggleTimer]);
+
+  const footerHint = useMemo(() => {
+    if (isBreak) {
+      return isRunning
+        ? (language === 'tr' ? 'Molayı duraklatmak için dokun' : 'Tap to pause break')
+        : (language === 'tr' ? 'Molayı başlatmak için dokun' : 'Tap to start break');
+    }
+    return t.mainTimer.tapToToggle;
+  }, [isBreak, isRunning, language, t]);
 
   const translateY = useSharedValue(0);
   const gestureStartY = useSharedValue(0);
@@ -196,10 +272,39 @@ function FocusEngineScreen() {
   }, [triggerImpact]);
 
   const closeDrawer = useCallback(() => {
+    commitDuration();
     setIsDrawerOpen(false);
     triggerImpact(Haptics.ImpactFeedbackStyle.Light);
     void playTickSound();
-  }, [triggerImpact]);
+  }, [commitDuration, triggerImpact]);
+
+  const handleSelectPresetSafe = useCallback((value: number) => {
+    if (isRunning) {
+      resetTimer();
+    }
+    selectPreset(value);
+  }, [isRunning, resetTimer, selectPreset]);
+
+  const handleCommitDurationSafe = useCallback(() => {
+    if (isRunning) {
+      resetTimer();
+    }
+    commitDuration();
+  }, [commitDuration, isRunning, resetTimer]);
+
+  const handleChangeDurationUnitSafe = useCallback((unit: DurationUnit) => {
+    if (isRunning) {
+      resetTimer();
+    }
+    handleChangeDurationUnit(unit);
+  }, [handleChangeDurationUnit, isRunning, resetTimer]);
+
+  const handleSelectPomodoroPresetSafe = useCallback((focus: number, shortM: number, longM: number) => {
+    if (isRunning) {
+      resetTimer();
+    }
+    setPomodoroPreset(focus, shortM, longM);
+  }, [isRunning, resetTimer, setPomodoroPreset]);
 
   const handleMenuSelect = useCallback((index: number) => {
     setActiveMenuIndex(index);
@@ -351,7 +456,7 @@ function FocusEngineScreen() {
                 accessible
                 accessibilityLabel="Focal Logo"
               />
-              <Text style={[styles.topMetaTitle, { color: colors.primary }]}>{t.mainTimer.focus}</Text>
+              <Text style={[styles.topMetaTitle, { color: isBreak ? colors.accent : colors.primary }]}>{topMetaTitle}</Text>
             </View>
             <Text style={[styles.topMetaSubtitle, { color: colors.muted }]}>
               {activeSubtitle}
@@ -364,7 +469,11 @@ function FocusEngineScreen() {
             style={[styles.focusSurface, animatedCounterStyle]}
             accessible
             accessibilityRole="button"
-            accessibilityLabel={isRunning ? t.mainTimer.ariaPause : t.mainTimer.ariaStart}
+            accessibilityLabel={
+              isBreak
+                ? (isRunning ? (language === 'tr' ? 'Molayı duraklat' : 'Pause break') : (language === 'tr' ? 'Molayı başlat' : 'Start break'))
+                : (isRunning ? t.mainTimer.ariaPause : t.mainTimer.ariaStart)
+            }
             accessibilityHint={t.mainTimer.ariaHint}
             onAccessibilityTap={toggleTimer}
           >
@@ -387,7 +496,7 @@ function FocusEngineScreen() {
         </GestureDetector>
 
         <View style={[styles.footer, { bottom: Math.max(insets.bottom + 26, 26) }]}>
-          <Text style={[styles.hint, { color: colors.muted }]}>{t.mainTimer.tapToToggle}</Text>
+          <Text style={[styles.hint, { color: colors.muted }]}>{footerHint}</Text>
           {isBreak && (
             <Pressable
               accessibilityRole="button"
@@ -404,7 +513,7 @@ function FocusEngineScreen() {
               </Text>
             </Pressable>
           )}
-          {(elapsed > 0 || showCompletion) && (
+          {(elapsed > 0 || isBreak || showCompletion) && (
             <ModernResetButton
               onPress={resetTimer}
               label={t.mainTimer.resetBadge}
@@ -421,13 +530,13 @@ function FocusEngineScreen() {
           body={completionBody}
           appName={t.common.appName || 'FOCAL'}
           timeText={t.mainTimer.now}
-          actionText={t.mainTimer.newSession}
+          actionText={bannerActionText}
           dismissText={t.mainTimer.dismiss}
           theme={theme}
           colors={colors}
           topInset={insets.top}
           hapticsEnabled={hapticsEnabled}
-          onAction={resetTimer}
+          onAction={handleBannerAction}
           onDismiss={dismissCompletion}
         />
 
@@ -445,25 +554,27 @@ function FocusEngineScreen() {
           notificationsEnabled={notificationsEnabled}
           soundEnabled={soundEnabled}
           pomodoroEnabled={pomodoroEnabled}
+          pomodoroFocusMinutes={pomodoroFocusMinutes}
           soundAlertTone={soundAlertTone}
           completedSessions={completedSessions}
           totalFocusMinutes={totalFocusMinutes}
+          weeklyHistory={weeklyHistory}
           pomodoroShortBreakMinutes={pomodoroShortBreakMinutes}
           pomodoroLongBreakMinutes={pomodoroLongBreakMinutes}
           colors={colors}
           onClose={closeDrawer}
           onSelect={handleMenuSelect}
-          onChangeDurationUnit={handleChangeDurationUnit}
+          onChangeDurationUnit={handleChangeDurationUnitSafe}
           onDurationDraftChange={handleDurationDraftChange}
-          onCommitDuration={commitDuration}
-          onSelectPreset={selectPreset}
+          onCommitDuration={handleCommitDurationSafe}
+          onSelectPreset={handleSelectPresetSafe}
           onThemeChange={handleThemeChange}
           onToggleLanguage={handleToggleLanguage}
           onToggleHaptics={handleToggleHaptics}
           onToggleNotifications={handleNotificationsToggleWrapper}
           onToggleSound={handleToggleSound}
           onTogglePomodoro={handleTogglePomodoro}
-          onSelectPomodoroPreset={setPomodoroPreset}
+          onSelectPomodoroPreset={handleSelectPomodoroPresetSafe}
           onSelectShortBreak={setPomodoroShortBreakMinutes}
           onSelectLongBreak={setPomodoroLongBreakMinutes}
           onSelectSoundTone={handleSelectSoundTone}

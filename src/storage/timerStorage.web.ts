@@ -69,6 +69,10 @@ export function loadTimerState(): TimerState {
   }
 }
 
+export function initTimerStorage(): Promise<TimerState> {
+  return Promise.resolve(loadTimerState());
+}
+
 export function saveTimerState(state: TimerState) {
   getLocalStorage()?.setItem(STORAGE_KEY, JSON.stringify(state));
 }

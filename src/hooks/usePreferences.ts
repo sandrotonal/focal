@@ -37,9 +37,11 @@ function getInitialPreferences(): FocusPreferences {
       totalFocusMinutes: 0,
       pomodoroEnabled: false,
       pomodoroCycle: 1,
+      pomodoroFocusMinutes: 25,
       pomodoroShortBreakMinutes: 5,
       pomodoroLongBreakMinutes: 15,
       soundAlertTone: 'crystal',
+      weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
     };
   }
 }
@@ -65,6 +67,9 @@ export function usePreferences() {
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(initial.totalFocusMinutes ?? 0);
   const [pomodoroEnabled, setPomodoroEnabled] = useState(initial.pomodoroEnabled ?? false);
   const [pomodoroCycle, setPomodoroCycle] = useState(initial.pomodoroCycle ?? 1);
+  const [pomodoroFocusMinutes, setPomodoroFocusMinutesState] = useState(
+    initial.pomodoroFocusMinutes ?? 25
+  );
   const [pomodoroShortBreakMinutes, setPomodoroShortBreakMinutesState] = useState(
     initial.pomodoroShortBreakMinutes ?? 5
   );
@@ -72,6 +77,9 @@ export function usePreferences() {
     initial.pomodoroLongBreakMinutes ?? 15
   );
   const [soundAlertTone, setSoundAlertTone] = useState<SoundAlertTone>(initial.soundAlertTone ?? 'crystal');
+  const [weeklyHistory, setWeeklyHistory] = useState<number[]>(
+    initial.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0]
+  );
 
   const latestPreferencesRef = useRef<FocusPreferences>({
     ...initial,
@@ -88,9 +96,11 @@ export function usePreferences() {
     totalFocusMinutes,
     pomodoroEnabled,
     pomodoroCycle,
+    pomodoroFocusMinutes,
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     soundAlertTone,
+    weeklyHistory,
   });
 
   // Ensure persistent storage is hydrated on app launch
@@ -117,9 +127,11 @@ export function usePreferences() {
         setTotalFocusMinutes(loaded.totalFocusMinutes);
         setPomodoroEnabled(loaded.pomodoroEnabled);
         setPomodoroCycle(loaded.pomodoroCycle);
+        setPomodoroFocusMinutesState(loaded.pomodoroFocusMinutes ?? 25);
         setPomodoroShortBreakMinutesState(loaded.pomodoroShortBreakMinutes);
         setPomodoroLongBreakMinutesState(loaded.pomodoroLongBreakMinutes);
         setSoundAlertTone(loaded.soundAlertTone);
+        setWeeklyHistory(loaded.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0]);
         latestPreferencesRef.current = loaded;
         setIsPreferencesLoaded(true);
       })
@@ -286,11 +298,20 @@ export function usePreferences() {
   const recordCompletedSession = useCallback((addedMinutes: number) => {
     const nextCompleted = completedSessions + 1;
     const nextMinutes = totalFocusMinutes + addedMinutes;
+
+    const day = new Date().getDay();
+    const todayIndex = day === 0 ? 6 : day - 1; // Mon = 0, Sun = 6
+    const currentHistory = latestPreferencesRef.current.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0];
+    const nextWeeklyHistory = [...currentHistory];
+    nextWeeklyHistory[todayIndex] = (nextWeeklyHistory[todayIndex] ?? 0) + addedMinutes;
+
     setCompletedSessions(nextCompleted);
     setTotalFocusMinutes(nextMinutes);
+    setWeeklyHistory(nextWeeklyHistory);
     saveCurrentPreferences({
       completedSessions: nextCompleted,
       totalFocusMinutes: nextMinutes,
+      weeklyHistory: nextWeeklyHistory,
     });
   }, [completedSessions, saveCurrentPreferences, totalFocusMinutes]);
 
@@ -319,6 +340,16 @@ export function usePreferences() {
     saveCurrentPreferences({ pomodoroCycle: clamped });
   }, [saveCurrentPreferences]);
 
+  const setPomodoroFocusMinutes = useCallback((m: number) => {
+    const clamped = Math.max(1, Math.min(180, Math.round(m)));
+    setPomodoroFocusMinutesState(clamped);
+    saveCurrentPreferences({ pomodoroFocusMinutes: clamped });
+    if (hapticsEnabled) {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
   const setPomodoroShortBreakMinutes = useCallback((m: number) => {
     const clamped = Math.max(1, Math.min(60, Math.round(m)));
     setPomodoroShortBreakMinutesState(clamped);
@@ -340,12 +371,11 @@ export function usePreferences() {
   }, [hapticsEnabled, saveCurrentPreferences]);
 
   const setPomodoroPreset = useCallback((focusM: number, shortM: number, longM: number) => {
-    setSessionMinutes(focusM);
-    setDurationDraft(String(focusM));
+    setPomodoroFocusMinutesState(focusM);
     setPomodoroShortBreakMinutesState(shortM);
     setPomodoroLongBreakMinutesState(longM);
     saveCurrentPreferences({
-      sessionMinutes: focusM,
+      pomodoroFocusMinutes: focusM,
       pomodoroShortBreakMinutes: shortM,
       pomodoroLongBreakMinutes: longM,
     });
@@ -371,9 +401,11 @@ export function usePreferences() {
     totalFocusMinutes,
     pomodoroEnabled,
     pomodoroCycle,
+    pomodoroFocusMinutes,
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     soundAlertTone,
+    weeklyHistory,
     saveCurrentPreferences,
     handleChangeDurationUnit,
     handleThemeChange,
@@ -384,6 +416,7 @@ export function usePreferences() {
     handleTogglePomodoro,
     handleSelectSoundTone,
     setPomodoroCycle: handleSetPomodoroCycle,
+    setPomodoroFocusMinutes,
     setPomodoroShortBreakMinutes,
     setPomodoroLongBreakMinutes,
     setPomodoroPreset,

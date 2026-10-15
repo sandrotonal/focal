@@ -47,11 +47,13 @@ export type FocusDrawerProps = {
   soundEnabled: boolean;
   pomodoroEnabled: boolean;
   pomodoroCycle?: number;
+  pomodoroFocusMinutes?: number;
   pomodoroShortBreakMinutes?: number;
   pomodoroLongBreakMinutes?: number;
   soundAlertTone: SoundAlertTone;
   completedSessions: number;
   totalFocusMinutes: number;
+  weeklyHistory?: number[];
   colors: AppColors;
   onClose: () => void;
   onSelect: (index: number) => void;
@@ -85,6 +87,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   notificationsEnabled,
   soundEnabled,
   pomodoroEnabled,
+  pomodoroFocusMinutes = 25,
   pomodoroShortBreakMinutes = 5,
   pomodoroLongBreakMinutes = 15,
   soundAlertTone,
@@ -107,6 +110,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   onSelectSoundTone,
   completedSessions,
   totalFocusMinutes,
+  weeklyHistory = [0, 0, 0, 0, 0, 0, 0],
 }: FocusDrawerProps) {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(-drawerWidth);
@@ -200,12 +204,12 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   const activePresetId = useMemo(() => {
     const matched = rhythmPresets.find(
       (p) =>
-        p.focus === sessionMinutes &&
+        p.focus === pomodoroFocusMinutes &&
         p.shortM === pomodoroShortBreakMinutes &&
         p.longM === pomodoroLongBreakMinutes
     );
     return matched?.id ?? '';
-  }, [rhythmPresets, sessionMinutes, pomodoroShortBreakMinutes, pomodoroLongBreakMinutes]);
+  }, [rhythmPresets, pomodoroFocusMinutes, pomodoroShortBreakMinutes, pomodoroLongBreakMinutes]);
 
   return (
     <>
@@ -287,10 +291,11 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                 <View style={styles.weeklyBarsRow}>
                   {weekDayLabels.map((dayLabel, index) => {
                     const isToday = index === currentDayIndex;
-                    // Proportional micro-fill based on totalFocusMinutes and completedSessions
-                    const barHeight = isToday
-                      ? Math.min(36, Math.max(12, Math.round((totalFocusMinutes % 30) + 12)))
-                      : (index * 7) % 24 + 6;
+                    const dayMinutes = weeklyHistory[index] ?? 0;
+                    // Proportional micro-fill based on authentic weekly history (60m = 36px full bar, 0m = 3px baseline tick)
+                    const barHeight = dayMinutes > 0
+                      ? Math.min(36, Math.max(6, Math.round((dayMinutes / 60) * 36)))
+                      : 3;
 
                     return (
                       <View key={dayLabel} style={styles.weekdayCol}>
@@ -300,7 +305,9 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                               styles.barFill,
                               {
                                 height: barHeight,
-                                backgroundColor: isToday ? colors.accent : colors.hairline,
+                                backgroundColor: isToday
+                                  ? colors.accent
+                                  : (dayMinutes > 0 ? colors.secondary : colors.hairline),
                               },
                             ]}
                           />
@@ -459,7 +466,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                       </Text>
                       <View style={styles.rhythmValueInline}>
                         <Text style={[styles.rhythmCadenceNumber, { color: colors.primary }]}>
-                          {sessionMinutes}
+                          {pomodoroFocusMinutes}
                         </Text>
                         <Text style={[styles.rhythmCadenceUnit, { color: colors.secondary }]}>
                           {t.common.minuteShort}

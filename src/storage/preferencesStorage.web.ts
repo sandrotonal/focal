@@ -18,9 +18,11 @@ export type FocusPreferences = {
   totalFocusMinutes: number;
   pomodoroEnabled: boolean;
   pomodoroCycle: number;
+  pomodoroFocusMinutes: number;
   pomodoroShortBreakMinutes: number;
   pomodoroLongBreakMinutes: number;
   soundAlertTone: SoundAlertTone;
+  weeklyHistory: number[];
 };
 
 const STORAGE_KEY = 'focal.preferences';
@@ -39,9 +41,11 @@ const defaults: FocusPreferences = {
   totalFocusMinutes: 0,
   pomodoroEnabled: false,
   pomodoroCycle: 1,
+  pomodoroFocusMinutes: 25,
   pomodoroShortBreakMinutes: 5,
   pomodoroLongBreakMinutes: 15,
   soundAlertTone: 'crystal',
+  weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
 };
 
 function getLocalStorage() {
@@ -86,6 +90,9 @@ export function loadPreferences(): FocusPreferences {
       pomodoroCycle: typeof parsed.pomodoroCycle === 'number'
         ? Math.min(4, Math.max(1, Math.round(parsed.pomodoroCycle)))
         : 1,
+      pomodoroFocusMinutes: typeof parsed.pomodoroFocusMinutes === 'number'
+        ? Math.min(180, Math.max(1, Math.round(parsed.pomodoroFocusMinutes)))
+        : (typeof parsed.sessionMinutes === 'number' ? Math.min(180, Math.max(1, Math.round(parsed.sessionMinutes))) : 25),
       pomodoroShortBreakMinutes: typeof parsed.pomodoroShortBreakMinutes === 'number'
         ? Math.min(60, Math.max(1, Math.round(parsed.pomodoroShortBreakMinutes)))
         : 5,
@@ -100,6 +107,12 @@ export function loadPreferences(): FocusPreferences {
         parsed.soundAlertTone === 'mechanical'
           ? parsed.soundAlertTone
           : defaults.soundAlertTone,
+      weeklyHistory:
+        Array.isArray(parsed.weeklyHistory) && parsed.weeklyHistory.length === 7
+          ? parsed.weeklyHistory.map((val) =>
+              typeof val === 'number' && Number.isFinite(val) ? Math.max(0, Math.round(val)) : 0
+            )
+          : [0, 0, 0, 0, 0, 0, 0],
     };
   } catch {
     return defaults;

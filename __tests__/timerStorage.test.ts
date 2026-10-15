@@ -1,4 +1,4 @@
-import { loadTimerState, saveTimerState, TimerState } from '../src/storage/timerStorage.web';
+import { initTimerStorage, loadTimerState, saveTimerState, TimerState } from '../src/storage/timerStorage.web';
 
 describe('timerStorage (web)', () => {
   const mockStorage: Record<string, string> = {};
@@ -19,7 +19,7 @@ describe('timerStorage (web)', () => {
     });
   });
 
-  it('returns default initial state when storage is empty', () => {
+  it('returns default initial state when storage is empty', async () => {
     const state = loadTimerState();
     expect(state).toEqual({
       elapsed: 0,
@@ -29,6 +29,9 @@ describe('timerStorage (web)', () => {
       timerMode: 'focus',
       pomodoroCycle: 1,
     });
+
+    const asyncState = await initTimerStorage();
+    expect(asyncState).toEqual(state);
   });
 
   it('persists and reloads active timer state accurately', () => {
