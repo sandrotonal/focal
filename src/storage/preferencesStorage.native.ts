@@ -25,6 +25,7 @@ export type FocusPreferences = {
   pomodoroLongBreakMinutes: number;
   soundAlertTone: SoundAlertTone;
   weeklyHistory: number[];
+  weeklyHistoryStartDate?: string;
 };
 
 const STORAGE_KEY = 'focal.preferences';
@@ -117,6 +118,10 @@ function parseAndValidatePreferences(serialized: string | null | undefined): Foc
               typeof val === 'number' && Number.isFinite(val) ? Math.max(0, Math.round(val)) : 0
             )
           : [0, 0, 0, 0, 0, 0, 0],
+      weeklyHistoryStartDate:
+        typeof parsed.weeklyHistoryStartDate === 'string'
+          ? parsed.weeklyHistoryStartDate
+          : undefined,
     };
   } catch {
     return defaults;

@@ -3,7 +3,11 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
-import { formatElapsed } from '../src/hooks/useFocusTimer';
+import {
+  calculateTargetSeconds,
+  formatElapsed,
+  getNextPomodoroStage,
+} from '../src/hooks/useFocusTimer';
 
 describe('formatElapsed', () => {
   test('formats zero seconds correctly', () => {
@@ -36,5 +40,84 @@ describe('formatElapsed', () => {
     expect(formatElapsed(-10)).toBe('00:00');
     expect(formatElapsed(Number.NaN)).toBe('00:00');
     expect(formatElapsed(65.8)).toBe('01:05');
+  });
+});
+
+describe('getNextPomodoroStage', () => {
+  test('transitions focus to shortBreak for cycles 1, 2, and 3', () => {
+    expect(getNextPomodoroStage('focus', 1)).toEqual({
+      nextMode: 'shortBreak',
+      nextCycle: 1,
+    });
+    expect(getNextPomodoroStage('focus', 2)).toEqual({
+      nextMode: 'shortBreak',
+      nextCycle: 2,
+    });
+    expect(getNextPomodoroStage('focus', 3)).toEqual({
+      nextMode: 'shortBreak',
+      nextCycle: 3,
+    });
+  });
+
+  test('transitions focus to longBreak on the 4th cycle', () => {
+    expect(getNextPomodoroStage('focus', 4)).toEqual({
+      nextMode: 'longBreak',
+      nextCycle: 4,
+    });
+  });
+
+  test('transitions shortBreak to next focus cycle', () => {
+    expect(getNextPomodoroStage('shortBreak', 1)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 2,
+    });
+    expect(getNextPomodoroStage('shortBreak', 2)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 3,
+    });
+    expect(getNextPomodoroStage('shortBreak', 3)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 4,
+    });
+  });
+
+  test('transitions longBreak back to focus and resets cycle to 1', () => {
+    expect(getNextPomodoroStage('longBreak', 4)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 1,
+    });
+  });
+
+  test('clamps out-of-range cycle numbers safely', () => {
+    expect(getNextPomodoroStage('focus', 99)).toEqual({
+      nextMode: 'longBreak',
+      nextCycle: 4,
+    });
+    expect(getNextPomodoroStage('focus', -5)).toEqual({
+      nextMode: 'shortBreak',
+      nextCycle: 1,
+    });
+    expect(getNextPomodoroStage('shortBreak', Number.NaN)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 2,
+    });
+  });
+});
+
+describe('calculateTargetSeconds', () => {
+  test('uses targetDurationSeconds when Pomodoro is disabled', () => {
+    expect(calculateTargetSeconds('focus', false, 1800, 25, 5, 15)).toBe(1800);
+    expect(calculateTargetSeconds('focus', false, 45, 25, 5, 15)).toBe(45);
+  });
+
+  test('calculates correct seconds for each Pomodoro stage when enabled', () => {
+    expect(calculateTargetSeconds('focus', true, 600, 25, 5, 15)).toBe(1500);
+    expect(calculateTargetSeconds('shortBreak', true, 600, 25, 5, 15)).toBe(300);
+    expect(calculateTargetSeconds('longBreak', true, 600, 25, 5, 15)).toBe(900);
+  });
+
+  test('safely clamps non-positive or corrupted target seconds', () => {
+    expect(calculateTargetSeconds('focus', false, -10, 25, 5, 15)).toBe(1);
+    expect(calculateTargetSeconds('focus', false, Number.NaN, 25, 5, 15)).toBe(1500);
   });
 });

@@ -13,12 +13,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sandrotonal.focal",
-      "infoPlist": {
-        "UIBackgroundModes": [
-          "audio"
-        ]
-      }
+      "bundleIdentifier": "com.sandrotonal.focal"
     },
     "android": {
       "adaptiveIcon": {

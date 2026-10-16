@@ -628,8 +628,8 @@ export function playFocusStartSound(): void {
 /**
  * Play focus completion tone with customizable tone palette
  */
-export function playFocusCompleteSound(tone: SoundAlertTone = 'crystal'): void {
-  if (!isSoundEnabled) return;
+export function playFocusCompleteSound(tone: SoundAlertTone = 'crystal', force = false): void {
+  if (!isSoundEnabled && !force) return;
   if (Platform.OS === 'web') {
     switch (tone) {
       case 'aurora':
@@ -675,10 +675,10 @@ export function playBreakCompleteSound(): void {
 }
 
 /**
- * Play a preview of the selected alert tone for immediate feedback
+ * Play a preview of the selected alert tone for immediate feedback (bypasses mute)
  */
 export function previewToneSound(tone: SoundAlertTone): void {
-  playFocusCompleteSound(tone);
+  playFocusCompleteSound(tone, true);
 }
 
 /**

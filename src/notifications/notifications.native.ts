@@ -22,7 +22,7 @@ if (!isExpoGoOnAndroid) {
 
     if (Platform.OS === 'android') {
       void notificationsModule.setNotificationChannelAsync('focus-completion', {
-        name: 'Odak Tamamlandı',
+        name: 'Focal Sessions',
         importance: notificationsModule.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0A84FF',

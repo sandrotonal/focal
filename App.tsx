@@ -11,21 +11,10 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { MainFocus3D } from './src/components/MainFocus3D';
-import { ModernResetButton } from './src/components/ui/ModernResetButton';
+import { RootErrorBoundary } from './src/components/common/RootErrorBoundary';
+import { TimerDisplay } from './src/components/timer/TimerDisplay';
 import { AppleNotificationBanner } from './src/components/ui/AppleNotificationBanner';
 import { OnboardingScreen } from './src/components/onboarding/OnboardingScreen';
 import { FocusDrawer } from './src/components/FocusDrawer';
@@ -35,15 +24,6 @@ import { useFocusTimer } from './src/hooks/useFocusTimer';
 import { playFocusStartSound, playTickSound } from './src/audio/soundEngine';
 import { translations } from './src/i18n/translations';
 import type { DurationUnit } from './src/storage/preferencesStorage';
-
-const RESET_THRESHOLD = 112;
-const FLICK_THRESHOLD = -56;
-const FLICK_VELOCITY = -650;
-
-function rubberBand(value: number, dimension: number, constant = 0.55) {
-  'worklet';
-  return (value * dimension * constant) / (dimension + constant * Math.abs(value));
-}
 
 function FocusEngineScreen() {
   const { width, height } = useWindowDimensions();
@@ -214,18 +194,13 @@ function FocusEngineScreen() {
         return t.mainTimer.sessionCompletedDesc;
       }
       if (completedCycle >= 4) {
-        return language === 'tr'
-          ? `Mükemmel disiplin! ${pomodoroLongBreakMinutes} dakikalık uzun mola zamanı.`
-          : `Outstanding discipline! Time for a ${pomodoroLongBreakMinutes}-minute long break.`;
+        return t.notifications.pomodoroLongBreakBodyDynamic(pomodoroLongBreakMinutes);
       }
-      return language === 'tr'
-        ? `Tebrikler! ${pomodoroShortBreakMinutes} dakikalık kısa dinlenme zamanı.`
-        : `Well done! Time for a ${pomodoroShortBreakMinutes}-minute short rest.`;
+      return t.notifications.pomodoroShortBreakBodyDynamic(pomodoroShortBreakMinutes);
     }
     return t.notifications.breakBody;
   }, [
     completedCycle,
-    language,
     lastCompletedStage,
     pomodoroEnabled,
     pomodoroLongBreakMinutes,
@@ -235,10 +210,10 @@ function FocusEngineScreen() {
 
   const bannerActionText = useMemo(() => {
     if (lastCompletedStage === 'focus' && pomodoroEnabled) {
-      return language === 'tr' ? 'Molayı Başlat' : 'Start Break';
+      return t.mainTimer.startBreak;
     }
     return t.mainTimer.newSession;
-  }, [language, lastCompletedStage, pomodoroEnabled, t]);
+  }, [lastCompletedStage, pomodoroEnabled, t]);
 
   const handleBannerAction = useCallback(() => {
     dismissCompletion();
@@ -252,16 +227,11 @@ function FocusEngineScreen() {
   const footerHint = useMemo(() => {
     if (isBreak) {
       return isRunning
-        ? (language === 'tr' ? 'Molayı duraklatmak için dokun' : 'Tap to pause break')
-        : (language === 'tr' ? 'Molayı başlatmak için dokun' : 'Tap to start break');
+        ? t.mainTimer.tapToPauseBreak
+        : t.mainTimer.tapToStartBreak;
     }
     return t.mainTimer.tapToToggle;
-  }, [isBreak, isRunning, language, t]);
-
-  const translateY = useSharedValue(0);
-  const gestureStartY = useSharedValue(0);
-  const runningScale = useSharedValue(1);
-  const reduceMotion = useReducedMotion();
+  }, [isBreak, isRunning, t]);
 
   const drawerWidth = Math.min(326, width * 0.84);
 
@@ -331,87 +301,6 @@ function FocusEngineScreen() {
     });
   }, [handleNotificationsToggle, isRunning, scheduleCompletion]);
 
-  const tapGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .maxDuration(350)
-        .maxDistance(18)
-        .onBegin(() => {
-          runningScale.value = withSpring(0.975, {
-            damping: 20,
-            stiffness: 450,
-            mass: 0.5,
-          });
-        })
-        .onFinalize(() => {
-          runningScale.value = withSpring(isRunning ? 1.012 : 1, {
-            damping: 20,
-            stiffness: 300,
-            mass: 0.7,
-          });
-        })
-        .onEnd(() => {
-          runOnJS(toggleTimer)();
-        }),
-    [isRunning, runningScale, toggleTimer],
-  );
-
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .minDistance(12)
-        .onStart(() => {
-          gestureStartY.value = translateY.value;
-          runningScale.value = withSpring(0.982, {
-            damping: 18,
-            stiffness: 420,
-            mass: 0.55,
-          });
-        })
-        .onUpdate((event) => {
-          translateY.value = gestureStartY.value + rubberBand(event.translationY, height);
-        })
-        .onEnd((event) => {
-          const shouldReset = event.translationY > RESET_THRESHOLD;
-          const shouldToggle = event.translationY < FLICK_THRESHOLD || event.velocityY < FLICK_VELOCITY;
-          const isShortDrag = Math.abs(event.translationY) < 30;
-
-          translateY.value = withSpring(0, {
-            damping: shouldToggle || shouldReset ? 20 : 24,
-            stiffness: shouldToggle || shouldReset ? 220 : 250,
-            velocity: event.velocityY,
-          });
-          runningScale.value = withSpring(isRunning ? 1.012 : 1, {
-            damping: 22,
-            stiffness: 300,
-            mass: 0.7,
-          });
-
-          if (shouldReset) {
-            runOnJS(resetTimer)();
-          } else if (shouldToggle || isShortDrag) {
-            runOnJS(toggleTimer)();
-          }
-        }),
-    [gestureStartY, height, isRunning, resetTimer, runningScale, toggleTimer, translateY],
-  );
-
-  const gesture = useMemo(
-    () => Gesture.Exclusive(panGesture, tapGesture),
-    [panGesture, tapGesture],
-  );
-
-  const dialScale = useMemo(() => {
-    const availableHeight = height - (insets.top + insets.bottom + 170);
-    const availableWidth = width - 40;
-    const target = Math.min(320, availableHeight, availableWidth);
-    return Math.max(0.78, Math.min(1, target / 320));
-  }, [height, insets.bottom, insets.top, width]);
-
-  const animatedCounterStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: runningScale.value * dialScale }],
-  }));
-
   if (!isPreferencesLoaded) {
     return <View style={[styles.screen, { backgroundColor: colors.background }]} />;
   }
@@ -432,7 +321,7 @@ function FocusEngineScreen() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
-        <StatusBar hidden style={theme === 'dark' ? 'light' : 'dark'} />
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
         <View
           style={[
@@ -473,65 +362,30 @@ function FocusEngineScreen() {
           </View>
         </View>
 
-        <GestureDetector gesture={gesture}>
-          <Animated.View
-            style={[styles.focusSurface, animatedCounterStyle]}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={
-              isBreak
-                ? (isRunning ? (language === 'tr' ? 'Molayı duraklat' : 'Pause break') : (language === 'tr' ? 'Molayı başlat' : 'Start break'))
-                : (isRunning ? t.mainTimer.ariaPause : t.mainTimer.ariaStart)
-            }
-            accessibilityHint={t.mainTimer.ariaHint}
-            onAccessibilityTap={toggleTimer}
-          >
-            <MainFocus3D
-              isRunning={isRunning}
-              elapsedText={elapsedText}
-              progress={progress}
-              sessionMinutes={sessionMinutes}
-              accentColor={colors.accent}
-              primaryColor={colors.primary}
-              secondaryColor={colors.secondary}
-              mutedColor={colors.muted}
-              hairlineColor={colors.hairline}
-              translateY={translateY}
-              reducedMotion={Boolean(reduceMotion)}
-              stageLabel={stageLabel}
-              isBreak={isBreak}
-            />
-          </Animated.View>
-        </GestureDetector>
-
-        <View style={[styles.footer, { bottom: Math.max(insets.bottom + 26, 26) }]}>
-          <Text style={[styles.hint, { color: colors.muted }]}>{footerHint}</Text>
-          {isBreak && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.mainTimer.ariaSkipBreak}
-              onPress={skipStage}
-              style={({ pressed }) => [
-                styles.skipBreakButton,
-                { borderColor: colors.hairline, backgroundColor: colors.panel },
-                pressed && styles.itemPressed,
-              ]}
-            >
-              <Text style={[styles.skipBreakText, { color: colors.secondary }]}>
-                {t.mainTimer.skipBreak}
-              </Text>
-            </Pressable>
-          )}
-          {(elapsed > 0 || isBreak || showCompletion) && (
-            <ModernResetButton
-              onPress={resetTimer}
-              label={t.mainTimer.resetBadge}
-              accessibilityLabel={t.mainTimer.ariaReset}
-              theme={theme}
-              style={styles.modernResetWrapper}
-            />
-          )}
-        </View>
+        <TimerDisplay
+          isRunning={isRunning}
+          elapsedText={elapsedText}
+          progress={progress}
+          sessionMinutes={sessionMinutes}
+          colors={colors}
+          stageLabel={stageLabel}
+          isBreak={isBreak}
+          footerHint={footerHint}
+          showResetButton={elapsed > 0 || isBreak || showCompletion}
+          resetLabel={t.mainTimer.resetBadge}
+          skipBreakLabel={t.mainTimer.skipBreak}
+          ariaSkipBreak={t.mainTimer.ariaSkipBreak}
+          ariaReset={t.mainTimer.ariaReset}
+          ariaStart={t.mainTimer.ariaStart}
+          ariaPause={t.mainTimer.ariaPause}
+          ariaHint={t.mainTimer.ariaHint}
+          theme={theme}
+          insetsBottom={insets.bottom}
+          insetsTop={insets.top}
+          onToggleTimer={toggleTimer}
+          onResetTimer={resetTimer}
+          onSkipStage={skipStage}
+        />
 
         <AppleNotificationBanner
           visible={showCompletion}
@@ -595,9 +449,11 @@ function FocusEngineScreen() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <FocusEngineScreen />
-    </SafeAreaProvider>
+    <RootErrorBoundary>
+      <SafeAreaProvider>
+        <FocusEngineScreen />
+      </SafeAreaProvider>
+    </RootErrorBoundary>
   );
 }
 
@@ -661,44 +517,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     letterSpacing: 0.2,
-  },
-  focusSurface: {
-    width: 320,
-    height: 320,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -24,
-  },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  hint: {
-    color: '#747681',
-    fontFamily: 'System',
-    fontSize: 12,
-    fontWeight: '400',
-    letterSpacing: 0.1,
-  },
-  skipBreakButton: {
-    marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  skipBreakText: {
-    fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  itemPressed: {
-    opacity: 0.6,
-  },
-  modernResetWrapper: {
-    marginTop: 14,
   },
 });

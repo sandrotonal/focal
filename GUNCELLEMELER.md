@@ -73,16 +73,71 @@ Bu doküman, FOCAL mobil uygulamasında gerçekleştirilen tüm mimari, mantıks
 | :--- | :--- | :--- |
 | Tip Güvenliği | TypeScript Compiler (`npx tsc --noEmit`) | 0 Hata |
 | Kod Standartları | Expo ESLint (`npx expo lint`) | 0 Hata, 0 Uyarı |
-| Birim Testleri | Jest Test Suite (`npm test`) | 5/5 Suite, 24/24 Test Başarılı |
-| Git Kuralları | Local Isolation | Kullanıcı onayı olmadan push yapılmadı |
+| Bağımlılık & Yapılandırma | Expo Doctor (`npx expo-doctor`) | 18/18 Kontrol Başarılı |
+| Birim Testleri | Jest Test Suite (`npm test`) | 5/5 Suite, 38/38 Test Başarılı |
+| Git Kuralları | Local Isolation & Approval | Kullanıcı onayı olmadan push yapılmaz |
 | Dil & Tipografi | Zero-Emoji & Temiz Kısaltmalar | Tam Uyum |
 
 ---
 
-## 6. Değiştirilen Dosyalar Özeti
+## 6. App Store Uyumluluğu ve Mimari İyileştirmeler (P0 / P1)
 
-1. `App.tsx`: Çekmece işleyicileri, güvenli sıfırlama, Pomodoro toggle güvenliği ve menü senkronizasyonu.
-2. `src/components/FocusDrawer.tsx`: Apple Settings Clean List düzeni, çökmeyen özel süre alanı, Pomodoro durum bildirimi, yapışık birimlerin düzeltilmesi.
-3. `src/hooks/usePreferences.ts`: Süre seçildiğinde Pomodoro'yu otomatik kapatma, `setPomodoroActive` fonksiyonu, kalıcı tercihler güncellemesi.
-4. `src/hooks/useFocusTimer.ts`: Soğuk başlangıç telafisi, AppState duvar saati doğrulaması, Pomodoro mod geçişinde temiz sıfırlama.
-5. `src/components/ui/AppleNotificationBanner.tsx`: Bildirim başlığındaki beyaz kare arka planın kaldırılarak saydam saf logonun konumlandırılması.
+### 6.1 Bildirim İzin Doğruluğu (Permission Truthfulness)
+- **Sorun:** Kullanıcı bildirim izni vermeden önce arayüzde bildirim toggle'ı hemen `true` yapılıyor, işletim sistemi izni reddetse dahi UI açık kalabiliyordu.
+- **Çözüm:** `usePreferences.ts` içinde iyimser güncelleme kaldırıldı. Sadece işletim sistemi `granted === true` döndüğünde durum `true` yapılır; izin reddedildiğinde veya hata alındığında durum `false`'a geri alınır ve AsyncStorage ile senkronize edilir.
+
+### 6.2 Apple Review Guideline 2.5.4 (UIBackgroundModes: Audio) Kaldırılması
+- **Sorun:** `app.json` içinde `UIBackgroundModes: ["audio"]` tanımlıydı. Uygulama sürekli arka plan sesi çalmayan bir sayaç aracı olduğundan, App Store incelemesinde anında red (reject) sebebi teşkil ediyordu.
+- **Çözüm:** `app.json` iOS konfigürasyonundan `UIBackgroundModes: ["audio"]` kaldırıldı.
+
+### 6.3 Yerel Zaman Dilimi Gece Yarısı Kayması (Timezone Midnight Offset)
+- **Sorun:** `toISOString().slice(0, 10)` kullanımı UTC zamanına göre tarih ürettiğinden, UTC+3 zaman diliminde (ör. Türkiye) Pazartesi gecesi 00:00 - 02:59 arasında tarih UTC Pazar olarak hesaplanıyor ve haftalık sayaç devri bozuluyordu.
+- **Çözüm:** `src/utils/date.ts` modülü oluşturularak `getFullYear()`, `getMonth() + 1` ve `getDate()` ile yerel takvim tabanlı ve `setHours(0, 0, 0, 0)` normalizasyonlu saf tarih fonksiyonlarına geçildi.
+
+### 6.4 Tek Doğruluk Kaynağı Tip Tanımları (Single Source of Truth)
+- **Sorun:** `FocusPreferences` tipi hem `src/storage/preferencesStorage.ts` hem de `src/components/onboarding/types.ts` içinde iki ayrı yerde tanımlanmıştı ve uyumsuzluk riski taşıyordu.
+- **Çözüm:** Onboarding içindeki mükerrer tip tanımı kaldırılarak depolama katmanındaki kanonik tip dışa aktarıldı ve `OnboardingScreen` `onComplete` prop'u `Partial<FocusPreferences>` ile gevşetildi.
+
+### 6.5 Ses Önizleme Baypas Mekanizması
+- **Sorun:** Sesler kapalıyken (`soundEnabled === false`), çekmecedeki ses tonu seçiminde önizleme çalınamıyordu.
+- **Çözüm:** `playFocusCompleteSound` fonksiyonuna `force = false` parametresi eklendi ve çekmecedeki `previewToneSound(tone, true)` çağrısıyla ses ayarı kapalı olsa bile kullanıcının seçtiği tonu duyabilmesi sağlandı.
+
+### 6.6 StatusBar Görünürlüğü (Apple HIG)
+- **Sorun:** `App.tsx` içinde StatusBar `hidden` olarak ayarlanmıştı. Apple İnsan Arayüzü Yönergelerine göre üretkenlik araçlarında durum çubuğunun gizlenmesi uygun değildir.
+- **Çözüm:** `hidden` prop'u kaldırılarak temaya göre dinamik `light`/`dark` stil verildi.
+
+### 6.7 Kök Hata Yakalayıcı (Root Error Boundary)
+- **Sorun:** Beklenmeyen bir JavaScript çalışma zamanı hatasında uygulama çöküyor veya beyaz ekranda kalıyordu.
+- **Çözüm:** Dieter Rams minimalist tasarım ilkelerine uygun, yüksek kontrastlı ve keskin kenarlıklı `RootErrorBoundary` bileşeni geliştirildi. Hata oluştuğunda alt ağacı temiz bir şekilde unmount/remount eden `resetKey` mekanizması ile kurtarma düğmesi sağlandı.
+
+### 6.8 Yerelleştirme ve Merkezi Çeviri Temizliği
+- **Sorun:** `App.tsx` içinde `language === 'tr'` şeklinde inline ternary metinler bulunuyordu.
+- **Çözüm:** Tüm metinler `src/i18n/translations.ts` merkezi sözlüğüne taşındı (`startBreak`, `tapToPauseBreak`, `tapToStartBreak`, dinamik Pomodoro seans tamamlandı gövde metinleri).
+
+### 6.9 EAS Yapılandırması ve Bağımlılık Eşitlemesi
+- **EAS Build:** `eas.json` oluşturularak development, preview ve production build profilleri yapılandırıldı.
+- **Expo Doctor:** Expo SDK 57 uyumlu yamalar uygulanarak Metro runtime, expo-asset ve expo-notifications versiyonları senkronize edildi.
+
+---
+
+## 7. Değiştirilen ve Eklenen Dosyalar Özeti
+
+1. `AGENTS.md`: App Store uyumluluğu, izin doğruluğu ve sıfır emoji kuralının eklenmesi.
+2. `App.tsx`: StatusBar görünürlüğü, RootErrorBoundary sarmalaması, merkezi çeviriler ve güvenli çekmece işleyicileri.
+3. `app.json`: `UIBackgroundModes: ["audio"]` kaldırılması.
+4. `eas.json`: EAS build konfigürasyonu.
+5. `package.json` & `package-lock.json`: Expo SDK 57 uyumlu bağımlılık güncellemeleri.
+6. `src/audio/soundEngine.ts`: `force` parametresi ile ses kapalıyken önizleme desteği.
+7. `src/components/common/RootErrorBoundary.tsx`: Minimalist kök hata yakalayıcı bileşeni.
+8. `src/components/onboarding/OnboardingScreen.tsx` & `src/components/onboarding/types.ts`: Tekil `FocusPreferences` tipi.
+9. `src/components/timer/TimerDisplay.tsx`: Erişilebilirlik etiketlerindeki ölü kod temizliği.
+10. `src/hooks/useFocusTimer.ts`: Pomodoro döngüsü sıfırlama, duvar saati senkronizasyonu.
+11. `src/hooks/usePreferences.ts`: Bildirim izni doğrulaması, haftalık tarih devri, Pomodoro/süre ayrımı.
+12. `src/i18n/translations.ts`: Merkezi çeviri sözlüğü genişletmesi.
+13. `src/notifications/notifications.native.ts`: Bildirim kanalı adının uluslararası standartlaştırılması.
+14. `src/storage/preferencesStorage.native.ts` & `src/storage/preferencesStorage.web.ts`: `weeklyHistoryStartDate` depolaması.
+15. `src/utils/date.ts`: Yerel zaman dilimi ve hafta başlangıcı hesaplama yardımcıları.
+16. `.agents/rules/10-app-store-compliance-and-native-permissions.md`: App Store uyumluluk kuralları.
+17. `.agents/skills/app-store-compliance/SKILL.md`: App Store uyumluluk becerisi.
+18. `.agents/workflows/app-store-readiness-audit.md`: App Store hazırlık denetim iş akışı.
+19. `__tests__/preferencesStorage.test.ts` & `__tests__/useFocusTimer.test.ts`: Kapsamlı birim testleri.

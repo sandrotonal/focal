@@ -18,6 +18,7 @@ import {
   setSoundEnabled as setSoundEngineEnabled,
 } from '../audio/soundEngine';
 import { requestNotificationPermission } from '../notifications/notifications';
+import { getMondayOfWeek } from '../utils/date';
 
 function getInitialPreferences(): FocusPreferences {
   try {
@@ -131,7 +132,17 @@ export function usePreferences() {
         setPomodoroShortBreakMinutesState(loaded.pomodoroShortBreakMinutes);
         setPomodoroLongBreakMinutesState(loaded.pomodoroLongBreakMinutes);
         setSoundAlertTone(loaded.soundAlertTone);
-        setWeeklyHistory(loaded.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0]);
+
+        const currentMonday = getMondayOfWeek();
+        const isNewWeek = Boolean(loaded.weeklyHistoryStartDate && loaded.weeklyHistoryStartDate !== currentMonday);
+        const resolvedHistory = isNewWeek ? [0, 0, 0, 0, 0, 0, 0] : (loaded.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0]);
+        setWeeklyHistory(resolvedHistory);
+        if (isNewWeek || !loaded.weeklyHistoryStartDate) {
+          loaded.weeklyHistory = resolvedHistory;
+          loaded.weeklyHistoryStartDate = currentMonday;
+          savePreferences(loaded);
+        }
+
         latestPreferencesRef.current = loaded;
         setIsPreferencesLoaded(true);
       })
@@ -229,8 +240,6 @@ export function usePreferences() {
       return false;
     }
 
-    setNotificationsEnabled(true);
-    saveCurrentPreferences({ notificationsEnabled: true });
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
@@ -238,11 +247,20 @@ export function usePreferences() {
 
     try {
       const granted = await requestNotificationPermission();
-      if (granted && onPermissionGranted) {
-        await onPermissionGranted();
+      if (granted) {
+        setNotificationsEnabled(true);
+        saveCurrentPreferences({ notificationsEnabled: true });
+        if (onPermissionGranted) {
+          await onPermissionGranted();
+        }
+        return true;
       }
-      return granted;
+      setNotificationsEnabled(false);
+      saveCurrentPreferences({ notificationsEnabled: false });
+      return false;
     } catch {
+      setNotificationsEnabled(false);
+      saveCurrentPreferences({ notificationsEnabled: false });
       return false;
     }
   }, [hapticsEnabled, notificationsEnabled, saveCurrentPreferences]);
@@ -302,9 +320,16 @@ export function usePreferences() {
     const nextCompleted = completedSessions + 1;
     const nextMinutes = totalFocusMinutes + addedMinutes;
 
+    const currentMonday = getMondayOfWeek();
     const day = new Date().getDay();
     const todayIndex = day === 0 ? 6 : day - 1; // Mon = 0, Sun = 6
-    const currentHistory = latestPreferencesRef.current.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0];
+    const isNewWeek = Boolean(
+      latestPreferencesRef.current.weeklyHistoryStartDate &&
+      latestPreferencesRef.current.weeklyHistoryStartDate !== currentMonday
+    );
+    const currentHistory = isNewWeek
+      ? [0, 0, 0, 0, 0, 0, 0]
+      : (latestPreferencesRef.current.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0]);
     const nextWeeklyHistory = [...currentHistory];
     nextWeeklyHistory[todayIndex] = (nextWeeklyHistory[todayIndex] ?? 0) + addedMinutes;
 
@@ -315,6 +340,7 @@ export function usePreferences() {
       completedSessions: nextCompleted,
       totalFocusMinutes: nextMinutes,
       weeklyHistory: nextWeeklyHistory,
+      weeklyHistoryStartDate: currentMonday,
     });
   }, [completedSessions, saveCurrentPreferences, totalFocusMinutes]);
 

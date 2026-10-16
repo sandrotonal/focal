@@ -1,29 +1,8 @@
-import type { DurationUnit, Language, ThemeMode } from '../../storage/preferencesStorage';
+import type { FocusPreferences } from '../../storage/preferencesStorage';
+import type { AppColors } from '../../theme/colors';
 
-export type FocusPreferences = {
-  sessionMinutes: number;
-  sessionSeconds: number;
-  durationUnit: DurationUnit;
-  theme: ThemeMode;
-  language: Language;
-  notificationsEnabled: boolean;
-  hapticsEnabled: boolean;
-  soundEnabled: boolean;
-  onboardingCompleted: boolean;
-  completedSessions: number;
-  totalFocusMinutes: number;
-};
-
-export type AppColors = {
-  background: string;
-  panel: string;
-  primary: string;
-  secondary: string;
-  muted: string;
-  hairline: string;
-  accent: string;
-  scrim: string;
-};
+export type { FocusPreferences };
+export type { AppColors };
 
 export type RhythmOption = {
   minutes: number;

@@ -28,6 +28,52 @@ export function formatElapsed(totalSeconds: number): string {
   return [minutes, seconds].map((unit) => String(unit).padStart(2, '0')).join(':');
 }
 
+export function getNextPomodoroStage(
+  currentMode: PomodoroStage,
+  currentCycle: number
+): { nextMode: PomodoroStage; nextCycle: number } {
+  const safeCycle = Math.min(4, Math.max(1, Math.round(Number.isFinite(currentCycle) ? currentCycle : 1)));
+
+  if (currentMode === 'focus') {
+    return {
+      nextMode: safeCycle >= 4 ? 'longBreak' : 'shortBreak',
+      nextCycle: safeCycle,
+    };
+  }
+
+  if (currentMode === 'shortBreak') {
+    return {
+      nextMode: 'focus',
+      nextCycle: Math.min(4, safeCycle + 1),
+    };
+  }
+
+  return {
+    nextMode: 'focus',
+    nextCycle: 1,
+  };
+}
+
+export function calculateTargetSeconds(
+  mode: PomodoroStage,
+  pomodoroEnabled: boolean,
+  targetDurationSeconds: number,
+  focusMinutes: number,
+  shortBreakMinutes: number,
+  longBreakMinutes: number
+): number {
+  if (!pomodoroEnabled) {
+    return Math.max(1, Math.round(Number.isFinite(targetDurationSeconds) ? targetDurationSeconds : 1500));
+  }
+  if (mode === 'shortBreak') {
+    return Math.max(1, Math.round(shortBreakMinutes * 60));
+  }
+  if (mode === 'longBreak') {
+    return Math.max(1, Math.round(longBreakMinutes * 60));
+  }
+  return Math.max(1, Math.round(focusMinutes * 60));
+}
+
 export type UseFocusTimerOptions = {
   targetDurationSeconds: number;
   sessionMinutes: number;
@@ -139,16 +185,14 @@ export function useFocusTimer({
 
   // Target duration dynamically based on current interval stage
   const effectiveTargetSeconds = useMemo(() => {
-    if (!pomodoroEnabled) {
-      return targetDurationSeconds;
-    }
-    if (timerMode === 'shortBreak') {
-      return pomodoroShortBreakMinutes * 60;
-    }
-    if (timerMode === 'longBreak') {
-      return pomodoroLongBreakMinutes * 60;
-    }
-    return pomodoroFocusMinutes * 60;
+    return calculateTargetSeconds(
+      timerMode,
+      pomodoroEnabled,
+      targetDurationSeconds,
+      pomodoroFocusMinutes,
+      pomodoroShortBreakMinutes,
+      pomodoroLongBreakMinutes
+    );
   }, [
     pomodoroEnabled,
     pomodoroFocusMinutes,
@@ -297,6 +341,15 @@ export function useFocusTimer({
     let nextMode: PomodoroStage = 'focus';
     let nextCycle = currentCycle;
 
+    if (pomodoroEnabled) {
+      const stageTransition = getNextPomodoroStage(currentMode, currentCycle);
+      nextMode = stageTransition.nextMode;
+      nextCycle = stageTransition.nextCycle;
+      if (currentMode !== 'focus') {
+        onPomodoroCycleChange?.(nextCycle);
+      }
+    }
+
     if (currentMode === 'focus') {
       const minutesToAdd = pomodoroEnabled
         ? pomodoroFocusMinutes
@@ -304,23 +357,9 @@ export function useFocusTimer({
           ? Math.max(1, Math.round(sessionSeconds / 60))
           : sessionMinutes;
       onSessionComplete(minutesToAdd);
-
       void playFocusCompleteSound(soundAlertTone);
-
-      if (pomodoroEnabled) {
-        nextMode = currentCycle >= 4 ? 'longBreak' : 'shortBreak';
-      }
-    } else if (currentMode === 'shortBreak') {
-      void playBreakCompleteSound();
-      nextMode = 'focus';
-      nextCycle = Math.min(4, currentCycle + 1);
-      onPomodoroCycleChange?.(nextCycle);
     } else {
-      // longBreak completed
       void playBreakCompleteSound();
-      nextMode = 'focus';
-      nextCycle = 1;
-      onPomodoroCycleChange?.(nextCycle);
     }
 
     timerModeRef.current = nextMode;
@@ -472,38 +511,33 @@ export function useFocusTimer({
     setShowCompletion(false);
     setLastCompletedStage(null);
 
+    const nextCycle = pomodoroEnabled ? 1 : cycleRef.current;
+    cycleRef.current = nextCycle;
+    setPomodoroCycle(nextCycle);
+    onPomodoroCycleChange?.(nextCycle);
+
     saveTimerState({
       elapsed: 0,
       isRunning: false,
       startedAt: null,
       scheduledNotificationId: null,
       timerMode: 'focus',
-      pomodoroCycle: cycleRef.current,
+      pomodoroCycle: nextCycle,
     });
 
     void playResetSound();
     if (hapticsEnabled) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-  }, [clearScheduledCompletion, hapticsEnabled]);
+  }, [clearScheduledCompletion, hapticsEnabled, onPomodoroCycleChange, pomodoroEnabled]);
 
   const skipStage = useCallback(() => {
     clearScheduledCompletion();
     const currentMode = timerModeRef.current;
     const currentCycle = cycleRef.current;
 
-    let nextMode: PomodoroStage = 'focus';
-    let nextCycle = currentCycle;
-
-    if (currentMode === 'focus') {
-      nextMode = currentCycle >= 4 ? 'longBreak' : 'shortBreak';
-    } else if (currentMode === 'shortBreak') {
-      nextMode = 'focus';
-      nextCycle = Math.min(4, currentCycle + 1);
-      onPomodoroCycleChange?.(nextCycle);
-    } else {
-      nextMode = 'focus';
-      nextCycle = 1;
+    const { nextMode, nextCycle } = getNextPomodoroStage(currentMode, currentCycle);
+    if (currentMode !== 'focus') {
       onPomodoroCycleChange?.(nextCycle);
     }
 
