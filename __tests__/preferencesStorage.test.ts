@@ -137,6 +137,8 @@ describe('preferencesStorage (web)', () => {
     expect(getMondayOfWeek(new Date('2026-10-18T10:00:00Z'))).toBe('2026-10-12');
     // 2026-10-19 is next Monday
     expect(getMondayOfWeek(new Date('2026-10-19T02:00:00Z'))).toBe('2026-10-19');
+    // Local calendar Monday at 00:30 UTC+3 must evaluate to 2026-10-19
+    expect(getMondayOfWeek(new Date('2026-10-19T00:30:00+03:00'))).toBe('2026-10-19');
   });
 
   it('persists and round-trips weeklyHistoryStartDate', () => {

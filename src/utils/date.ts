@@ -6,14 +6,15 @@
  * Local date getters (getFullYear, getMonth, getDate) are strictly used
  * instead of toISOString() to prevent UTC timezone boundary shifts (e.g. UTC+3).
  */
-export function getMondayOfWeek(d: Date = new Date()): string {
-  const date = new Date(d);
+export function getMondayOfWeek(d: Date | string = new Date()): string {
+  const date = typeof d === 'string' ? new Date(d) : new Date(d);
   date.setHours(0, 0, 0, 0);
 
   const day = date.getDay();
   // day: 0 (Sun) to 6 (Sat). If Sunday (0), go back 6 days to Monday. Otherwise, go to Monday (1).
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   date.setDate(diff);
+  date.setHours(0, 0, 0, 0);
 
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

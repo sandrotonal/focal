@@ -7,6 +7,7 @@ import {
   calculateTargetSeconds,
   formatElapsed,
   getNextPomodoroStage,
+  getResetPomodoroState,
 } from '../src/hooks/useFocusTimer';
 
 describe('formatElapsed', () => {
@@ -119,5 +120,30 @@ describe('calculateTargetSeconds', () => {
   test('safely clamps non-positive or corrupted target seconds', () => {
     expect(calculateTargetSeconds('focus', false, -10, 25, 5, 15)).toBe(1);
     expect(calculateTargetSeconds('focus', false, Number.NaN, 25, 5, 15)).toBe(1500);
+  });
+});
+
+describe('getResetPomodoroState', () => {
+  test('resets timerMode to focus and cycle to 1 when Pomodoro is enabled', () => {
+    const result = getResetPomodoroState(true, 3);
+    expect(result.nextMode).toBe('focus');
+    expect(result.nextCycle).toBe(1);
+  });
+
+  test('resets timerMode to focus and preserves current cycle when Pomodoro is disabled', () => {
+    const result = getResetPomodoroState(false, 3);
+    expect(result.nextMode).toBe('focus');
+    expect(result.nextCycle).toBe(3);
+  });
+
+  test('safely clamps corrupted cycle values when Pomodoro is disabled', () => {
+    expect(getResetPomodoroState(false, Number.NaN)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 1,
+    });
+    expect(getResetPomodoroState(false, -2)).toEqual({
+      nextMode: 'focus',
+      nextCycle: 1,
+    });
   });
 });

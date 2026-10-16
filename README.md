@@ -94,15 +94,24 @@ Focal is a high-performance, minimalist mobile productivity application engineer
 - Dynamic spring physics tuning: gentle entrance, snappy interruptible dismissal.
 - Worklet offloading executing gestures and perspective calculations directly on the native UI thread.
 
-#### 9. Precision Option Wheel & Pomodoro Rhythm Engine
-- **Swiss Minimalist Rhythm Wheel:** Vertical wheel selector with Apple Aperture guidelines (`RhythmOptionWheel`), tactile tick sounds (`soundEngine`), and micro-haptic pulses (`expo-haptics`).
-- **Complete Pomodoro State Machine:** Automated progression between Focus, Short Break, and Long Break intervals, customizable interval durations, and cycle-aware state transitions.
-- **Resonance Alert Tones:** Three distinct acoustic finish profiles (Marimba, Zen Bell, Crystal) and dedicated break completion chimes.
-- **Pure Typographic Balance:** Frameless metric triad strictly adhering to Dieter Rams principles with zero emoji distractions.
+#### 8. Apple Settings Clean List & Cadence Panel
+- **Dieter Rams Minimalism:** High-contrast surfaces, razor-sharp 1px borders, and clear typographic spacing replacing heavy bubble cards.
+- **Apple Settings Clean List:** Native layout with unified unit abbreviations (`15 dk`, `25 dk`, `45 dk`, `60 dk`) and fixed-dimension non-collapsing custom duration inputs.
+- **Complete Pomodoro State Machine:** Automated progression between Focus, Short Break, and Long Break intervals, customizable interval durations, cycle coherence, and transparent rhythm mode guidance.
+- **Resonance Alert Tones:** Three distinct acoustic finish profiles (Marimba, Zen Bell, Crystal) with preview override even when global sounds are muted.
 
-#### 10. Modular Architecture & shadcn Structure
-- Independent custom hooks (`useFocusTimer`, `usePreferences`) separating domain business logic from view rendering.
-- Extensible `/components/ui` component topology following shadcn and Atomic Design standards with `@/*` path mapping.
+#### 9. App Store Compliance & Native Permission Truthfulness
+- **Truthful Permission Flow:** Notification toggle only activates upon confirmed OS `granted === true`; denied or cancelled states immediately revert UI toggles and persist to storage.
+- **Guideline 2.5.4 Compliance:** Strictly avoids background audio entitlement (`UIBackgroundModes: ["audio"]`) ensuring immediate App Store review pass for focus timer tools.
+- **StatusBar Visibility:** Status bar remains contextually visible with adaptive light/dark typography aligned with Apple Human Interface Guidelines.
+
+#### 10. Root Error Boundary & Production Recovery
+- **Dieter Rams System Recovery:** Production crash boundary with offline AsyncStorage error telemetry (`focal.last-error`).
+- **Clean Subtree Remount:** Reset trigger leverages `Updates.reloadAsync()` in production and key-based clean unmount/remount in development, preventing infinite crash loops.
+
+#### 11. Timezone-Safe Weekly Telemetry Rollover
+- **Calendar-Accurate Rollover:** Pure local date mathematics (`src/utils/date.ts`) bypassing UTC boundary shifts (safe for UTC+3 and international users).
+- **DST Compensation:** Normalizes hours to `00:00:00.000` to prevent day skips across daylight saving transitions.
 
 ---
 
@@ -121,15 +130,17 @@ focal/
 │   ├── audio/
 │   │   └── soundEngine.ts     # Multi-player acoustic sound engine & web synthesizer
 │   ├── components/
-│   │   ├── onboarding/        # 3D Gyro onboarding carousel
+│   │   ├── common/
+│   │   │   └── RootErrorBoundary.tsx # Dieter Rams high-contrast error boundary
+│   │   ├── onboarding/        # 3D Gyro onboarding carousel & slides
+│   │   ├── timer/
+│   │   │   └── TimerDisplay.tsx # Isolated chronometer presentation component
 │   │   ├── ui/
 │   │   │   ├── AppleNotificationBanner.tsx # Native iOS-style banner notification
 │   │   │   ├── ModernResetButton.tsx       # Fluid interactive reset trigger
 │   │   │   ├── ModernSwitch.tsx            # Custom animated SVG toggle
-│   │   │   ├── RhythmOptionWheel.tsx       # Apple aperture precision rhythm wheel
-│   │   │   ├── option-wheel.tsx            # 3D cylindrical web option wheel
-│   │   │   └── demo.tsx                    # Component showcase demo
-│   │   ├── FocusDrawer.tsx    # Slide-over control drawer & cadence panel
+│   │   │   └── RhythmOptionWheel.tsx       # Apple aperture precision rhythm wheel
+│   │   ├── FocusDrawer.tsx    # Slide-over Apple Settings Clean List drawer
 │   │   ├── LineSidebar.tsx    # Left-edge vertical navigation indicator
 │   │   └── MainFocus3D.tsx    # Kinetic core chronometer
 │   ├── hooks/
@@ -137,12 +148,13 @@ focal/
 │   │   └── usePreferences.ts  # Localized settings and persistent storage sync
 │   ├── i18n/
 │   │   └── translations.ts    # Bi-lingual English / Turkish translation dictionary
-│   ├── lib/
-│   │   └── utils.ts           # Class merge and style utilities
 │   ├── notifications/         # Multi-platform notification scheduler (native & web)
 │   ├── storage/               # AsyncStorage + in-memory L1 cache persistence drivers
-│   └── theme/
-│       └── colors.ts          # Apple dark mode surface hierarchy tokens
+│   ├── theme/
+│   │   └── colors.ts          # Apple dark mode surface hierarchy tokens
+│   └── utils/
+│       └── date.ts            # Local timezone & weekly Monday calculation utilities
+├── eas.json                   # EAS build & channel configuration
 ├── App.tsx                    # Root application entry & coordinator
 ├── package.json
 └── tsconfig.json

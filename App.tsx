@@ -366,7 +366,6 @@ function FocusEngineScreen() {
           isRunning={isRunning}
           elapsedText={elapsedText}
           progress={progress}
-          sessionMinutes={sessionMinutes}
           colors={colors}
           stageLabel={stageLabel}
           isBreak={isBreak}

@@ -33,7 +33,6 @@ export interface TimerDisplayProps {
   isRunning: boolean;
   elapsedText: string;
   progress: number;
-  sessionMinutes: number;
   colors: AppColors;
   stageLabel?: string;
   isBreak: boolean;
@@ -58,7 +57,6 @@ export const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(function Tim
   isRunning,
   elapsedText,
   progress,
-  sessionMinutes,
   colors,
   stageLabel,
   isBreak,
@@ -184,10 +182,8 @@ export const TimerDisplay: React.FC<TimerDisplayProps> = React.memo(function Tim
             isRunning={isRunning}
             elapsedText={elapsedText}
             progress={progress}
-            sessionMinutes={sessionMinutes}
             accentColor={colors.accent}
             primaryColor={colors.primary}
-            secondaryColor={colors.secondary}
             mutedColor={colors.muted}
             hairlineColor={colors.hairline}
             translateY={translateY}

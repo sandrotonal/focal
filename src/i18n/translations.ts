@@ -100,12 +100,9 @@ export interface TranslationSchema {
     stageLongBreak: string;
     cycleBadge: (cycle: number, max?: number) => string;
     tapToToggle: string;
-    pullToReset: string;
-    releaseToReset: string;
     skipBreak: string;
     sessionCompleted: string;
     sessionCompletedDesc: string;
-    completedSessions: (count: number) => string;
     resetBadge: string;
     newSession: string;
     startBreak: string;
@@ -282,12 +279,9 @@ export const translations: Record<Language, TranslationSchema> = {
       stageLongBreak: 'UZUN MOLA',
       cycleBadge: (cycle: number, max: number = 4) => `DÖNGÜ ${cycle}/${max}`,
       tapToToggle: 'Dokunarak başlat / durdur',
-      pullToReset: 'Seansı sıfırlamak için aşağı çek',
-      releaseToReset: 'Bırak ve Sıfırla',
       skipBreak: 'Molayı Geç',
       sessionCompleted: 'Seans tamamlandı',
       sessionCompletedDesc: 'Hedeflenen odak süresine ulaştın.',
-      completedSessions: (count: number) => `Tamamlanan: ${count} seans`,
       resetBadge: 'SIFIRLA',
       newSession: 'Yeni Seans',
       startBreak: 'Molayı Başlat',
@@ -462,12 +456,9 @@ export const translations: Record<Language, TranslationSchema> = {
       stageLongBreak: 'LONG BREAK',
       cycleBadge: (cycle: number, max: number = 4) => `CYCLE ${cycle}/${max}`,
       tapToToggle: 'Tap to start / pause',
-      pullToReset: 'Pull down to reset session',
-      releaseToReset: 'Release to Reset',
       skipBreak: 'Skip Break',
       sessionCompleted: 'Session completed',
       sessionCompletedDesc: 'Target focus duration reached.',
-      completedSessions: (count: number) => `Completed: ${count} sessions`,
       resetBadge: 'RESET',
       newSession: 'New Session',
       startBreak: 'Start Break',

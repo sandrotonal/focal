@@ -6,10 +6,20 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "plugins": [
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0A84FF"
+        }
+      ],
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      "expo-updates"
     ],
     "ios": {
       "supportsTablet": true,

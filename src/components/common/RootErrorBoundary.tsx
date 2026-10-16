@@ -6,6 +6,8 @@ import {
   View,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 interface Props {
   children: ReactNode;
 }
@@ -31,10 +33,35 @@ export class RootErrorBoundary extends Component<Props, State> {
   }
 
   public override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('[RootErrorBoundary] Application crash caught:', error?.message, errorInfo?.componentStack);
+    if (__DEV__) {
+      console.error('[RootErrorBoundary] Application crash caught:', error?.message, errorInfo?.componentStack);
+    }
+
+    try {
+      const errorPayload = JSON.stringify({
+        message: error?.message || 'Unknown error',
+        stack: error?.stack || null,
+        componentStack: errorInfo?.componentStack || null,
+        timestamp: new Date().toISOString(),
+      });
+      void AsyncStorage.setItem('focal.last-error', errorPayload).catch(() => {});
+    } catch {
+      // Storage write failure should never crash the error boundary
+    }
   }
 
-  private handleReset = (): void => {
+  private handleReset = async (): Promise<void> => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Updates = require('expo-updates') as typeof import('expo-updates');
+      if (typeof Updates?.reloadAsync === 'function' && !__DEV__) {
+        await Updates.reloadAsync();
+        return;
+      }
+    } catch {
+      // Fallback to key-based clean component remount
+    }
+
     this.setState((prev) => ({
       hasError: false,
       error: null,

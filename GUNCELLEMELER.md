@@ -74,7 +74,7 @@ Bu doküman, FOCAL mobil uygulamasında gerçekleştirilen tüm mimari, mantıks
 | Tip Güvenliği | TypeScript Compiler (`npx tsc --noEmit`) | 0 Hata |
 | Kod Standartları | Expo ESLint (`npx expo lint`) | 0 Hata, 0 Uyarı |
 | Bağımlılık & Yapılandırma | Expo Doctor (`npx expo-doctor`) | 18/18 Kontrol Başarılı |
-| Birim Testleri | Jest Test Suite (`npm test`) | 5/5 Suite, 38/38 Test Başarılı |
+| Birim Testleri | Jest Test Suite (`npm test`) | 5/5 Suite, 41/41 Test Başarılı |
 | Git Kuralları | Local Isolation & Approval | Kullanıcı onayı olmadan push yapılmaz |
 | Dil & Tipografi | Zero-Emoji & Temiz Kısaltmalar | Tam Uyum |
 
@@ -141,3 +141,43 @@ Bu doküman, FOCAL mobil uygulamasında gerçekleştirilen tüm mimari, mantıks
 17. `.agents/skills/app-store-compliance/SKILL.md`: App Store uyumluluk becerisi.
 18. `.agents/workflows/app-store-readiness-audit.md`: App Store hazırlık denetim iş akışı.
 19. `__tests__/preferencesStorage.test.ts` & `__tests__/useFocusTimer.test.ts`: Kapsamlı birim testleri.
+
+---
+
+## 8. Kalan P0/P1 İyileştirmeleri ve Görsel Güncellemeleri
+
+### 8.1 Hafta Hesabı DST & UTC+3 Doğrulaması (P0-1)
+- `src/utils/date.ts` içindeki `getMondayOfWeek` yardımcı fonksiyonu, hem `Date` hem de `string` parametreleri güvenle kabul edecek şekilde güncellendi.
+- `date.setHours(0, 0, 0, 0)` normalizasyonu `setDate(diff)` sonrasında da uygulanarak DST (yaz saati) kaymaları tamamen engellendi.
+- `__tests__/preferencesStorage.test.ts` içine Türkiye yerel saatinde Pazartesi 00:30 (`2026-10-19T00:30:00+03:00`) test senaryosu eklenerek `2026-10-19` haftalık devri doğrulandı.
+
+### 8.2 RootErrorBoundary Üretim Telemetrisi & Kurtarma (P0-2)
+- Beklenmeyen çalışma zamanı hataları üretim ortamında kaybolmayacak şekilde `AsyncStorage` üzerindeki `focal.last-error` anahtarına JSON olarak yazıldı (`message`, `stack`, `componentStack`, `timestamp`).
+- `handleReset` kurtarma tetikleyicisi, üretimde `Updates.reloadAsync()` çağrısı yapacak; geliştirme ortamında veya reload başarısızlığında `resetKey` artırımı ile tüm alt bileşen ağacını temiz bir şekilde remount edecek mimariye kavuşturuldu.
+- Geliştirici hata kutusu yalnızca `__DEV__` durumunda sınırlandırıldı.
+
+### 8.3 EAS ve expo-updates Yapılandırması (P0-3)
+- `npx expo install expo-updates` ile SDK 57 uyumlu paket kuruldu.
+- `app.json` içine `"runtimeVersion": { "policy": "appVersion" }` eklendi.
+- `eas.json` yapılandırmasına `development`, `preview` ve `production` build kanalları eklendi, preview APK ve production AAB ayrımı korundu.
+
+### 8.4 Ölü Kod Temizliği ve Prop Budama (P1-1)
+- `src/components/ui/demo.tsx`, `src/components/ui/option-wheel.tsx`, `src/lib/utils.ts` ve `src/components/onboarding/AmbientGlow.tsx` atıl dosyaları tamamen silindi.
+- `Artwork3D.tsx` içindeki 4 eski uyumluluk alias'ı kaldırıldı.
+- `MainFocus3D.tsx`, `TimerDisplay.tsx` ve `App.tsx` bileşen zincirinden kullanılmayan `sessionMinutes` ve `secondaryColor` prop'ları budandı.
+- `translations.ts` dosyasından atıl `pullToReset`, `releaseToReset` ve `completedSessions` anahtarları temizlendi.
+
+### 8.5 resetTimer Pomodoro Tutarlılığı (P1-3)
+- Sayaç sıfırlandığında Pomodoro açık ise seans modu her zaman `'focus'` ve döngü her zaman `1` olacak şekilde standartlaştırıldı.
+- `getResetPomodoroState` saf fonksiyonu yazılarak `__tests__/useFocusTimer.test.ts` içine 3 yeni birim testi eklendi.
+
+### 8.6 Android Bildirim Kanalı Yerelleştirmesi (P1-4)
+- `src/notifications/notifications.native.ts` içinde cihaz diline (`Intl.DateTimeFormat`) göre `'Odak Seansları'` / `'Focus Sessions'` kanal adı ve açıklaması dinamik olarak ayarlandı.
+- `app.json` `expo-notifications` plugin yapılandırmasına bildirim ikonu (`./assets/icon.png`) ve rengi (`#0A84FF`) tanımlandı.
+
+### 8.7 README ve Ekran Görüntüleri Revizyonu
+- Playwright otomasyonu ile çalışan uygulamadan güncel ekran görüntüleri yakalandı (`390x844` piksel):
+  - `04_main_timer.png`: Sade, logo başlıklı ana sayaç ekranı.
+  - `05_drawer_menu.png`: Apple Settings Clean List düzeni ve haftalık gerçek telemetri grafiği.
+  - `06_notification_banner.png`: Arkasındaki beyaz kutu kaldırılmış, şeffaf saf Focal logolu Apple Notification Banner.
+- `README.md` içerisindeki mimari ilkeler ve proje dosya ağacı güncel duruma uyarlandı.

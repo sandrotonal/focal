@@ -14,10 +14,8 @@ type Props = {
   isRunning: boolean;
   elapsedText: string;
   progress: number;
-  sessionMinutes: number;
   accentColor: string;
   primaryColor: string;
-  secondaryColor: string;
   mutedColor: string;
   hairlineColor: string;
   translateY: SharedValue<number>;
@@ -36,10 +34,8 @@ export const MainFocus3D: React.FC<Props> = React.memo(function MainFocus3D({
   isRunning,
   elapsedText,
   progress,
-  sessionMinutes,
   accentColor,
   primaryColor,
-  secondaryColor,
   mutedColor,
   hairlineColor,
   translateY,

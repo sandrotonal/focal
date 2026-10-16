@@ -74,6 +74,16 @@ export function calculateTargetSeconds(
   return Math.max(1, Math.round(focusMinutes * 60));
 }
 
+export function getResetPomodoroState(
+  pomodoroEnabled: boolean,
+  currentCycle: number
+): { nextMode: PomodoroStage; nextCycle: number } {
+  return {
+    nextMode: 'focus',
+    nextCycle: pomodoroEnabled ? 1 : Math.max(1, Math.round(Number.isFinite(currentCycle) ? currentCycle : 1)),
+  };
+}
+
 export type UseFocusTimerOptions = {
   targetDurationSeconds: number;
   sessionMinutes: number;
@@ -504,25 +514,26 @@ export function useFocusTimer({
     elapsedRef.current = 0;
     runningRef.current = false;
     startedAtRef.current = null;
-    timerModeRef.current = 'focus';
+
+    const resetState = getResetPomodoroState(pomodoroEnabled, cycleRef.current);
+    timerModeRef.current = resetState.nextMode;
     setElapsed(0);
     setIsRunning(false);
-    setTimerMode('focus');
+    setTimerMode(resetState.nextMode);
     setShowCompletion(false);
     setLastCompletedStage(null);
 
-    const nextCycle = pomodoroEnabled ? 1 : cycleRef.current;
-    cycleRef.current = nextCycle;
-    setPomodoroCycle(nextCycle);
-    onPomodoroCycleChange?.(nextCycle);
+    cycleRef.current = resetState.nextCycle;
+    setPomodoroCycle(resetState.nextCycle);
+    onPomodoroCycleChange?.(resetState.nextCycle);
 
     saveTimerState({
       elapsed: 0,
       isRunning: false,
       startedAt: null,
       scheduledNotificationId: null,
-      timerMode: 'focus',
-      pomodoroCycle: nextCycle,
+      timerMode: resetState.nextMode,
+      pomodoroCycle: resetState.nextCycle,
     });
 
     void playResetSound();

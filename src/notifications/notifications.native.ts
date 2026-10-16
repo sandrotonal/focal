@@ -21,8 +21,17 @@ if (!isExpoGoOnAndroid) {
     });
 
     if (Platform.OS === 'android') {
+      const deviceLocale =
+        typeof Intl !== 'undefined' && Intl.DateTimeFormat
+          ? Intl.DateTimeFormat().resolvedOptions().locale?.toLowerCase()
+          : '';
+      const isTurkish = Boolean(deviceLocale?.startsWith('tr'));
+
       void notificationsModule.setNotificationChannelAsync('focus-completion', {
-        name: 'Focal Sessions',
+        name: isTurkish ? 'Odak Seansları' : 'Focus Sessions',
+        description: isTurkish
+          ? 'Tamamlanan odak ve mola seansları için bildirimler'
+          : 'Notifications for completed focus and break sessions',
         importance: notificationsModule.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0A84FF',
