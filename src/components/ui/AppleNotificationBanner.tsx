@@ -74,9 +74,6 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
             textSecondary: 'rgba(235, 235, 245, 0.65)',
             textMuted: 'rgba(235, 235, 245, 0.40)',
             headerMeta: 'rgba(255, 255, 255, 0.72)',
-            iconContainerBg: '#FFFFFF',
-            iconContainerBorder: 'rgba(255, 255, 255, 0.12)',
-            iconGlyph: '#0A84FF',
             closeBg: 'rgba(255, 255, 255, 0.08)',
             closeIcon: 'rgba(255, 255, 255, 0.72)',
             actionBg: 'rgba(255, 255, 255, 0.09)',
@@ -90,9 +87,6 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
             textSecondary: 'rgba(60, 60, 67, 0.70)',
             textMuted: 'rgba(60, 60, 67, 0.44)',
             headerMeta: 'rgba(30, 30, 35, 0.75)',
-            iconContainerBg: '#FFFFFF',
-            iconContainerBorder: 'rgba(0, 0, 0, 0.08)',
-            iconGlyph: '#007AFF',
             closeBg: 'rgba(0, 0, 0, 0.06)',
             closeIcon: 'rgba(60, 60, 67, 0.70)',
             actionBg: 'rgba(0, 0, 0, 0.06)',
@@ -229,23 +223,13 @@ export const AppleNotificationBanner: React.FC<AppleNotificationBannerProps> = R
           {/* Header Row: Refined App Icon, Name, Time, Subtle Close */}
           <View style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <View
-                style={[
-                  styles.appIconContainer,
-                  {
-                    backgroundColor: tokens.iconContainerBg,
-                    borderColor: tokens.iconContainerBorder,
-                  },
-                ]}
-              >
-                <Image
-                  source={require('../../../assets/focal-logo.png')}
-                  style={styles.appIconImage}
-                  resizeMode="contain"
-                  accessible
-                  accessibilityLabel="Focal Logo"
-                />
-              </View>
+              <Image
+                source={require('../../../assets/focal-logo.png')}
+                style={styles.appIconImage}
+                resizeMode="contain"
+                accessible
+                accessibilityLabel="Focal Logo"
+              />
 
               <Text style={[styles.appName, { color: tokens.headerMeta }]}>
                 {appName.toUpperCase()}
@@ -400,34 +384,11 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  appIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 2,
-      },
-      web: {
-        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.12)',
-      },
-    }),
+    gap: 7,
   },
   appIconImage: {
-    width: 22,
-    height: 22,
+    width: 18,
+    height: 18,
   },
   appName: {
     fontFamily: SYSTEM_FONT,

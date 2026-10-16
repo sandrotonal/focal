@@ -335,87 +335,191 @@ export const FocusDrawer = React.memo(function FocusDrawer({
 
           {activeIndex === 1 && (
             <View style={styles.drawerSection}>
-              {/* Unit Selector: Dakika / Saniye */}
-              <View style={[styles.unitSelectorRow, { borderColor: colors.hairline, backgroundColor: colors.background }]}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t.drawer.sections.unitMinutes}
-                  onPress={() => onChangeDurationUnit('minutes')}
-                  style={[
-                    styles.unitTab,
-                    durationUnit === 'minutes' && { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 1 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.unitTabText,
-                      { color: durationUnit === 'minutes' ? colors.primary : colors.muted },
-                    ]}
-                  >
-                    {t.drawer.sections.unitMinutes.toUpperCase()}
+              {/* Pomodoro Active Status Banner */}
+              {pomodoroEnabled && (
+                <View style={[styles.pomodoroActiveBadgeRow, { borderBottomColor: colors.hairline }]}>
+                  <View style={[styles.pomodoroActiveDot, { backgroundColor: colors.accent }]} />
+                  <Text style={[styles.pomodoroActiveText, { color: colors.secondary }]}>
+                    {language === 'tr'
+                      ? 'Pomodoro ritim modu devrede. Buradan bir süre seçtiğinde standart odak sayacına geçilir.'
+                      : 'Pomodoro rhythm mode is active. Selecting a duration switches to standard focus timer.'}
                   </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t.drawer.sections.unitSeconds}
-                  onPress={() => onChangeDurationUnit('seconds')}
-                  style={[
-                    styles.unitTab,
-                    durationUnit === 'seconds' && { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 1 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.unitTabText,
-                      { color: durationUnit === 'seconds' ? colors.primary : colors.muted },
-                    ]}
-                  >
-                    {t.drawer.sections.unitSeconds.toUpperCase()}
-                  </Text>
-                </Pressable>
-              </View>
+                </View>
+              )}
 
-              <View style={styles.durationEditor}>
-                <TextInput
-                  accessibilityLabel={t.drawer.sections.focusDuration}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  onBlur={onCommitDuration}
-                  onChangeText={onDurationDraftChange}
-                  onSubmitEditing={onCommitDuration}
-                  returnKeyType="done"
-                  selectTextOnFocus
-                  style={[styles.durationInput, { color: colors.primary, borderBottomColor: colors.hairline }]}
-                  value={durationDraft}
-                />
-                <Text style={[styles.durationUnit, { color: colors.secondary }]}>
-                  {durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort}
+              {/* Saniye Modu Switch - Unified with the rest of the drawer */}
+              <Pressable
+                accessible
+                accessibilityRole="switch"
+                accessibilityState={{ checked: durationUnit === 'seconds' }}
+                accessibilityLabel={language === 'tr' ? 'Hassas Saniye Modu' : 'Precision Seconds Mode'}
+                onPress={() => onChangeDurationUnit(durationUnit === 'seconds' ? 'minutes' : 'seconds')}
+                style={({ pressed }) => [
+                  styles.settingRow,
+                  { borderBottomColor: colors.hairline, marginTop: 4 },
+                  pressed && styles.itemPressed,
+                ]}
+              >
+                <View style={styles.settingTextGroup}>
+                  <Text style={[styles.settingValue, { color: colors.primary }]}>
+                    {language === 'tr' ? 'Hassas Saniye Modu' : 'Precision Seconds Mode'}
+                  </Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                    {language === 'tr' ? 'Kısa sprintler ve hassas zamanlama' : 'Short sprints & precision intervals'}
+                  </Text>
+                </View>
+                <View pointerEvents="none">
+                  <ModernSwitch
+                    value={durationUnit === 'seconds'}
+                    onValueChange={() => {}}
+                    checkedBg={colors.accent}
+                    uncheckedBg={colors.hairline}
+                    crossColor={colors.muted}
+                    checkmarkColor="#FFFFFF"
+                    accessibilityLabel={language === 'tr' ? 'Hassas Saniye Modu' : 'Precision Seconds Mode'}
+                  />
+                </View>
+              </Pressable>
+
+              {/* Section Header */}
+              <View style={styles.durationListHeaderRow}>
+                <Text style={[styles.durationListHeader, { color: colors.muted }]}>
+                  {durationUnit === 'seconds'
+                    ? (language === 'tr' ? 'SANİYE SPRINT SEÇENEKLERİ' : 'SPRINT INTERVAL OPTIONS')
+                    : (language === 'tr' ? 'ODAK SÜRESİ SEÇENEKLERİ' : 'FOCUS DURATION OPTIONS')}
                 </Text>
               </View>
 
-              <View style={styles.presetRow}>
-                {(durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES).map((option) => {
-                  const isSelected = durationUnit === 'seconds' ? option === sessionSeconds : option === sessionMinutes;
-                  const unitLabel = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
-                  return (
-                    <Pressable
-                      key={option}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${option} ${unitLabel}`}
-                      onPress={() => onSelectPreset(option)}
-                      style={({ pressed }) => [
-                        styles.preset,
-                        { borderBottomColor: isSelected ? colors.accent : colors.hairline },
-                        pressed && styles.itemPressed,
-                      ]}
-                    >
-                      <Text style={[styles.presetText, { color: isSelected ? colors.primary : colors.secondary }]}>
-                        {option}
+              {/* Apple Settings Clean List of Durations with Checkmark */}
+              {(durationUnit === 'seconds'
+                ? [
+                    { value: 15, subtitle: language === 'tr' ? 'Mikro test sprinti' : 'Micro sprint test' },
+                    { value: 30, subtitle: language === 'tr' ? 'Hızlı kontrol döngüsü' : 'Fast check cycle' },
+                    { value: 45, subtitle: language === 'tr' ? 'Genişletilmiş test periyodu' : 'Extended test period' },
+                    { value: 60, subtitle: language === 'tr' ? '1 dakikalık tam sprint' : '1-minute full sprint' },
+                  ]
+                : [
+                    { value: 15, subtitle: language === 'tr' ? 'Hızlı odak ve kısa sprint' : 'Quick focus & short sprint' },
+                    { value: 25, subtitle: language === 'tr' ? 'Klasik Pomodoro standardı' : 'Classic Pomodoro standard' },
+                    { value: 45, subtitle: language === 'tr' ? 'Derin çalışma ve akış bloğu' : 'Deep work & flow block' },
+                    { value: 60, subtitle: language === 'tr' ? 'İleri seviye maraton odağı' : 'Extended focus marathon' },
+                  ]
+              ).map(({ value, subtitle }) => {
+                const currentVal = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes;
+                const standardOptions = durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES;
+                const isCustom = !standardOptions.includes(currentVal);
+                const isSelected = !pomodoroEnabled && !isCustom && currentVal === value;
+                const unitSuffix = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
+
+                return (
+                  <Pressable
+                    key={value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${value} ${unitSuffix}`}
+                    onPress={() => onSelectPreset(value)}
+                    style={({ pressed }) => [
+                      styles.settingRow,
+                      { borderBottomColor: colors.hairline },
+                      pressed && styles.itemPressed,
+                    ]}
+                  >
+                    <View style={styles.settingTextGroup}>
+                      <Text
+                        style={[
+                          styles.settingValue,
+                          {
+                            color: isSelected ? colors.primary : colors.secondary,
+                            fontWeight: isSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {value} {unitSuffix}
                       </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                      <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                        {subtitle}
+                      </Text>
+                    </View>
+
+                    {isSelected ? (
+                      <View style={styles.toneCheckmarkWrapper}>
+                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M5 13l4 4L19 7"
+                            stroke={colors.accent}
+                            strokeWidth={2.4}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </View>
+                    ) : (
+                      <View style={styles.toneCheckmarkPlaceholder} />
+                    )}
+                  </Pressable>
+                );
+              })}
+
+              {/* Dedicated Custom Duration Setting Row */}
+              {(() => {
+                const currentVal = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes;
+                const standardOptions = durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES;
+                const isCustom = !standardOptions.includes(currentVal);
+                const isCustomSelected = !pomodoroEnabled && isCustom;
+                const unitSuffix = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
+
+                return (
+                  <View
+                    style={[
+                      styles.settingRow,
+                      { borderBottomColor: colors.hairline },
+                    ]}
+                  >
+                    <View style={styles.settingTextGroup}>
+                      <Text
+                        style={[
+                          styles.settingValue,
+                          {
+                            color: isCustomSelected ? colors.primary : colors.secondary,
+                            fontWeight: isCustomSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {t.drawer.sections.customDuration}
+                      </Text>
+                      <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                        {durationUnit === 'seconds'
+                          ? (language === 'tr' ? '5 ile 3600 sn arası serbest değer' : 'Free value between 5 and 3600s')
+                          : (language === 'tr' ? '1 ile 180 dk arası serbest değer' : 'Free value between 1 and 180m')}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customInputRow}>
+                      <TextInput
+                        accessibilityLabel={t.drawer.sections.customDuration}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        onBlur={onCommitDuration}
+                        onChangeText={onDurationDraftChange}
+                        onSubmitEditing={onCommitDuration}
+                        returnKeyType="done"
+                        selectTextOnFocus
+                        style={[
+                          styles.customInputBox,
+                          {
+                            color: colors.primary,
+                            borderColor: isCustomSelected ? colors.accent : colors.hairline,
+                            backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+                          },
+                        ]}
+                        value={durationDraft}
+                      />
+                      <Text style={[styles.customInputUnitText, { color: colors.muted }]}>
+                        {unitSuffix}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
             </View>
           )}
 
@@ -548,7 +652,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                                 { color: isSel ? colors.primary : colors.muted },
                               ]}
                             >
-                              {mins}m
+                              {mins} {t.common.minuteShort}
                             </Text>
                           </Pressable>
                         );
@@ -587,7 +691,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                                 { color: isSel ? colors.primary : colors.muted },
                               ]}
                             >
-                              {mins}m
+                              {mins} {t.common.minuteShort}
                             </Text>
                           </Pressable>
                         );
@@ -1008,62 +1112,56 @@ const styles = StyleSheet.create({
   itemPressed: {
     opacity: 0.55,
   },
-  unitSelectorRow: {
+  pomodoroActiveBadgeRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    marginBottom: 4,
+  },
+  pomodoroActiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  pomodoroActiveText: {
+    flex: 1,
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
+  },
+  durationListHeaderRow: {
+    paddingTop: 20,
+    paddingBottom: 6,
+  },
+  durationListHeader: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  customInputBox: {
+    width: 58,
+    height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    padding: 3,
-    marginBottom: 8,
-    gap: 4,
-  },
-  unitTab: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unitTabText: {
     fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 0,
+    paddingHorizontal: 4,
   },
-  durationEditor: {
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  durationInput: {
-    width: 88,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
+  customInputUnitText: {
     fontFamily: 'System',
-    fontSize: 28,
-    fontWeight: '300',
-    letterSpacing: -0.6,
-  },
-  durationUnit: {
-    marginLeft: 10,
-    marginBottom: 10,
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: '400',
-  },
-  presetRow: {
-    marginTop: 20,
-    flexDirection: 'row',
-    gap: 24,
-  },
-  preset: {
-    minWidth: 36,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    alignItems: 'center',
-  },
-  presetText: {
-    fontFamily: 'System',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   pomodoroFramelessContainer: {
@@ -1109,36 +1207,6 @@ const styles = StyleSheet.create({
   rhythmCadenceDivider: {
     width: 1,
     height: 34,
-  },
-  framelessRhythmRow: {
-    flexDirection: 'row',
-    marginTop: 18,
-    marginBottom: 8,
-    justifyContent: 'space-between',
-  },
-  framelessRhythmCol: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  framelessRhythmRatio: {
-    fontFamily: 'System',
-    fontSize: 18,
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  framelessRhythmName: {
-    fontFamily: 'System',
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  framelessRhythmIndicator: {
-    width: 24,
-    height: 2,
-    borderRadius: 1,
   },
   inlinePresetPillRow: {
     flexDirection: 'row',

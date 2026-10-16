@@ -272,32 +272,41 @@ function FocusEngineScreen() {
   }, [triggerImpact]);
 
   const closeDrawer = useCallback(() => {
-    commitDuration();
+    if (activeMenuIndex === 1) {
+      commitDuration();
+    }
     setIsDrawerOpen(false);
     triggerImpact(Haptics.ImpactFeedbackStyle.Light);
     void playTickSound();
-  }, [commitDuration, triggerImpact]);
+  }, [activeMenuIndex, commitDuration, triggerImpact]);
 
   const handleSelectPresetSafe = useCallback((value: number) => {
-    if (isRunning) {
+    if (isRunning || pomodoroEnabled) {
       resetTimer();
     }
     selectPreset(value);
-  }, [isRunning, resetTimer, selectPreset]);
+  }, [isRunning, pomodoroEnabled, resetTimer, selectPreset]);
 
   const handleCommitDurationSafe = useCallback(() => {
-    if (isRunning) {
+    if (isRunning || pomodoroEnabled) {
       resetTimer();
     }
     commitDuration();
-  }, [commitDuration, isRunning, resetTimer]);
+  }, [commitDuration, isRunning, pomodoroEnabled, resetTimer]);
 
   const handleChangeDurationUnitSafe = useCallback((unit: DurationUnit) => {
-    if (isRunning) {
+    if (isRunning || pomodoroEnabled) {
       resetTimer();
     }
     handleChangeDurationUnit(unit);
-  }, [handleChangeDurationUnit, isRunning, resetTimer]);
+  }, [handleChangeDurationUnit, isRunning, pomodoroEnabled, resetTimer]);
+
+  const handleTogglePomodoroSafe = useCallback(() => {
+    if (isRunning) {
+      resetTimer();
+    }
+    handleTogglePomodoro();
+  }, [handleTogglePomodoro, isRunning, resetTimer]);
 
   const handleSelectPomodoroPresetSafe = useCallback((focus: number, shortM: number, longM: number) => {
     if (isRunning) {
@@ -573,7 +582,7 @@ function FocusEngineScreen() {
           onToggleHaptics={handleToggleHaptics}
           onToggleNotifications={handleNotificationsToggleWrapper}
           onToggleSound={handleToggleSound}
-          onTogglePomodoro={handleTogglePomodoro}
+          onTogglePomodoro={handleTogglePomodoroSafe}
           onSelectPomodoroPreset={handleSelectPomodoroPresetSafe}
           onSelectShortBreak={setPomodoroShortBreakMinutes}
           onSelectLongBreak={setPomodoroLongBreakMinutes}

@@ -166,7 +166,8 @@ export function usePreferences() {
   const handleChangeDurationUnit = useCallback((unit: DurationUnit) => {
     setDurationUnit(unit);
     setDurationDraft(unit === 'seconds' ? String(sessionSeconds) : String(sessionMinutes));
-    saveCurrentPreferences({ durationUnit: unit });
+    setPomodoroEnabled(false);
+    saveCurrentPreferences({ durationUnit: unit, pomodoroEnabled: false });
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
     }
@@ -247,14 +248,15 @@ export function usePreferences() {
   }, [hapticsEnabled, notificationsEnabled, saveCurrentPreferences]);
 
   const selectPreset = useCallback((value: number) => {
+    setPomodoroEnabled(false);
     if (durationUnit === 'seconds') {
       setSessionSeconds(value);
       setDurationDraft(String(value));
-      saveCurrentPreferences({ sessionSeconds: value });
+      saveCurrentPreferences({ sessionSeconds: value, pomodoroEnabled: false });
     } else {
       setSessionMinutes(value);
       setDurationDraft(String(value));
-      saveCurrentPreferences({ sessionMinutes: value });
+      saveCurrentPreferences({ sessionMinutes: value, pomodoroEnabled: false });
     }
     if (hapticsEnabled) {
       void Haptics.selectionAsync();
@@ -269,16 +271,17 @@ export function usePreferences() {
       return;
     }
 
+    setPomodoroEnabled(false);
     if (durationUnit === 'seconds') {
       const clamped = Math.min(3600, Math.max(1, parsed));
       setSessionSeconds(clamped);
       setDurationDraft(String(clamped));
-      saveCurrentPreferences({ sessionSeconds: clamped });
+      saveCurrentPreferences({ sessionSeconds: clamped, pomodoroEnabled: false });
     } else {
       const clamped = Math.min(180, Math.max(1, parsed));
       setSessionMinutes(clamped);
       setDurationDraft(String(clamped));
-      saveCurrentPreferences({ sessionMinutes: clamped });
+      saveCurrentPreferences({ sessionMinutes: clamped, pomodoroEnabled: false });
     }
   }, [durationDraft, durationUnit, saveCurrentPreferences, sessionMinutes, sessionSeconds]);
 
@@ -324,6 +327,11 @@ export function usePreferences() {
     }
     void playTickSound();
   }, [hapticsEnabled, pomodoroEnabled, saveCurrentPreferences]);
+
+  const setPomodoroActive = useCallback((enabled: boolean) => {
+    setPomodoroEnabled(enabled);
+    saveCurrentPreferences({ pomodoroEnabled: enabled });
+  }, [saveCurrentPreferences]);
 
   const handleSelectSoundTone = useCallback((tone: SoundAlertTone) => {
     setSoundAlertTone(tone);
@@ -414,6 +422,8 @@ export function usePreferences() {
     handleToggleSound,
     handleNotificationsToggle,
     handleTogglePomodoro,
+    setPomodoroActive,
+    setPomodoroEnabled: setPomodoroActive,
     handleSelectSoundTone,
     setPomodoroCycle: handleSetPomodoroCycle,
     setPomodoroFocusMinutes,
