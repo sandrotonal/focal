@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import {
+  AmbientSoundType,
   DurationUnit,
   FocusPreferences,
   Language,
@@ -14,6 +15,7 @@ import {
 } from '../storage/preferencesStorage';
 import {
   playTickSound,
+  previewAmbientSound,
   previewToneSound,
   setSoundEnabled as setSoundEngineEnabled,
 } from '../audio/soundEngine';
@@ -42,6 +44,8 @@ function getInitialPreferences(): FocusPreferences {
       pomodoroShortBreakMinutes: 5,
       pomodoroLongBreakMinutes: 15,
       soundAlertTone: 'crystal',
+      ambientSound: 'none',
+      flipToFocus: false,
       weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
     };
   }
@@ -78,6 +82,8 @@ export function usePreferences() {
     initial.pomodoroLongBreakMinutes ?? 15
   );
   const [soundAlertTone, setSoundAlertTone] = useState<SoundAlertTone>(initial.soundAlertTone ?? 'crystal');
+  const [ambientSound, setAmbientSound] = useState<AmbientSoundType>(initial.ambientSound ?? 'none');
+  const [flipToFocus, setFlipToFocus] = useState<boolean>(initial.flipToFocus ?? false);
   const [weeklyHistory, setWeeklyHistory] = useState<number[]>(
     initial.weeklyHistory ?? [0, 0, 0, 0, 0, 0, 0]
   );
@@ -101,6 +107,8 @@ export function usePreferences() {
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     soundAlertTone,
+    ambientSound,
+    flipToFocus,
     weeklyHistory,
   });
 
@@ -132,6 +140,8 @@ export function usePreferences() {
         setPomodoroShortBreakMinutesState(loaded.pomodoroShortBreakMinutes);
         setPomodoroLongBreakMinutesState(loaded.pomodoroLongBreakMinutes);
         setSoundAlertTone(loaded.soundAlertTone);
+        setAmbientSound(loaded.ambientSound ?? 'none');
+        setFlipToFocus(loaded.flipToFocus ?? false);
 
         const currentMonday = getMondayOfWeek();
         const isNewWeek = Boolean(loaded.weeklyHistoryStartDate && loaded.weeklyHistoryStartDate !== currentMonday);
@@ -419,6 +429,28 @@ export function usePreferences() {
     void playTickSound();
   }, [hapticsEnabled, saveCurrentPreferences]);
 
+  const handleSelectAmbientSound = useCallback((ambient: AmbientSoundType, isTimerRunning = false) => {
+    setAmbientSound(ambient);
+    saveCurrentPreferences({ ambientSound: ambient });
+    if (hapticsEnabled && Platform.OS !== 'web') {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+    if (!isTimerRunning) {
+      void previewAmbientSound(ambient);
+    }
+  }, [hapticsEnabled, saveCurrentPreferences]);
+
+  const handleToggleFlipToFocus = useCallback(() => {
+    const nextVal = !flipToFocus;
+    setFlipToFocus(nextVal);
+    saveCurrentPreferences({ flipToFocus: nextVal });
+    if (hapticsEnabled && Platform.OS !== 'web') {
+      void Haptics.selectionAsync();
+    }
+    void playTickSound();
+  }, [flipToFocus, hapticsEnabled, saveCurrentPreferences]);
+
   return {
     isPreferencesLoaded,
     onboardingCompleted,
@@ -439,6 +471,8 @@ export function usePreferences() {
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     soundAlertTone,
+    ambientSound,
+    flipToFocus,
     weeklyHistory,
     saveCurrentPreferences,
     handleChangeDurationUnit,
@@ -451,6 +485,8 @@ export function usePreferences() {
     setPomodoroActive,
     setPomodoroEnabled: setPomodoroActive,
     handleSelectSoundTone,
+    handleSelectAmbientSound,
+    handleToggleFlipToFocus,
     setPomodoroCycle: handleSetPomodoroCycle,
     setPomodoroFocusMinutes,
     setPomodoroShortBreakMinutes,

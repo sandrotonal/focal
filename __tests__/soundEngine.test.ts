@@ -7,6 +7,9 @@ import {
   playBreakCompleteSound,
   previewToneSound,
   playResetSound,
+  startAmbientSound,
+  stopAmbientSound,
+  previewAmbientSound,
   preloadNativeSounds,
   preloadToneSound,
   cleanupAudioEngine,
@@ -73,6 +76,18 @@ describe('Sound Engine', () => {
       preloadToneSound('mechanical');
     }).not.toThrow();
   });
+
+  test('should handle ambient sounds without throwing', () => {
+    expect(() => {
+      startAmbientSound('brown');
+      previewAmbientSound('rain');
+      startAmbientSound('storm');
+      previewAmbientSound('ocean');
+      startAmbientSound('none');
+      stopAmbientSound();
+    }).not.toThrow();
+  });
+
 
   test('should clean up audio engine without throwing', () => {
     expect(() => {

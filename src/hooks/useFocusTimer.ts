@@ -8,13 +8,20 @@ import {
   playFocusStartSound,
   playResetSound,
   playTickSound,
+  startAmbientSound,
+  stopAmbientSound,
 } from '../audio/soundEngine';
 import {
   cancelFocusCompletion,
   scheduleFocusCompletion,
 } from '../notifications/notifications';
 import { initTimerStorage, loadTimerState, saveTimerState } from '../storage/timerStorage';
-import type { DurationUnit, PomodoroStage, SoundAlertTone } from '../storage/preferencesStorage';
+import type {
+  AmbientSoundType,
+  DurationUnit,
+  PomodoroStage,
+  SoundAlertTone,
+} from '../storage/preferencesStorage';
 
 export function formatElapsed(totalSeconds: number): string {
   const safeSeconds = Math.max(0, Math.floor(Number.isFinite(totalSeconds) ? totalSeconds : 0));
@@ -92,6 +99,7 @@ export type UseFocusTimerOptions = {
   notificationsEnabled: boolean;
   hapticsEnabled: boolean;
   soundAlertTone?: SoundAlertTone;
+  ambientSound?: AmbientSoundType;
   pomodoroEnabled?: boolean;
   pomodoroCycle?: number;
   pomodoroFocusMinutes?: number;
@@ -164,6 +172,7 @@ export function useFocusTimer({
   notificationsEnabled,
   hapticsEnabled,
   soundAlertTone = 'crystal',
+  ambientSound = 'none',
   pomodoroEnabled = false,
   pomodoroCycle: externalPomodoroCycle = 1,
   pomodoroFocusMinutes = 25,
@@ -285,6 +294,7 @@ export function useFocusTimer({
 
     return () => {
       isMounted = false;
+      stopAmbientSound();
     };
   }, []);
 
@@ -336,6 +346,7 @@ export function useFocusTimer({
 
   // Completion trigger handler with automatic Pomodoro progression
   const handleComplete = useCallback(() => {
+    stopAmbientSound();
     const currentMode = timerModeRef.current;
     const currentCycle = cycleRef.current;
 
@@ -471,6 +482,18 @@ export function useFocusTimer({
     }
   }, [isRunning, notificationsEnabled, scheduleCompletion]);
 
+  // Dynamically cross-fade ambient soundscape if changed while timer is actively running
+  useEffect(() => {
+    if (isRunning) {
+      if (ambientSound !== 'none') {
+        startAmbientSound(ambientSound);
+      } else {
+        stopAmbientSound();
+      }
+    }
+  }, [ambientSound, isRunning]);
+
+
   const toggleTimer = useCallback(() => {
     setShowCompletion(false);
     const nextRunning = !runningRef.current;
@@ -483,6 +506,7 @@ export function useFocusTimer({
       const baseStart = now - elapsedRef.current * 1000;
       startedAtRef.current = baseStart;
       void playFocusStartSound();
+      startAmbientSound(ambientSound);
       void scheduleCompletion();
       saveTimerState({
         elapsed: elapsedRef.current,
@@ -495,6 +519,7 @@ export function useFocusTimer({
     } else {
       startedAtRef.current = null;
       void playTickSound();
+      stopAmbientSound();
       clearScheduledCompletion();
       saveTimerState({
         elapsed: elapsedRef.current,
@@ -507,9 +532,10 @@ export function useFocusTimer({
     }
 
     triggerImpact(nextRunning ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
-  }, [clearScheduledCompletion, scheduleCompletion, triggerImpact]);
+  }, [ambientSound, clearScheduledCompletion, scheduleCompletion, triggerImpact]);
 
   const resetTimer = useCallback(() => {
+    stopAmbientSound();
     clearScheduledCompletion();
     elapsedRef.current = 0;
     runningRef.current = false;
@@ -543,6 +569,7 @@ export function useFocusTimer({
   }, [clearScheduledCompletion, hapticsEnabled, onPomodoroCycleChange, pomodoroEnabled]);
 
   const skipStage = useCallback(() => {
+    stopAmbientSound();
     clearScheduledCompletion();
     const currentMode = timerModeRef.current;
     const currentCycle = cycleRef.current;

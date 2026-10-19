@@ -23,7 +23,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sandrotonal.focal"
+      "bundleIdentifier": "com.sandrotonal.focal",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Focal uses Apple Health to read focus session data.",
+        "NSHealthUpdateUsageDescription": "Focal records your completed focus sessions as Mindful Minutes in Apple Health."
+      }
     },
     "android": {
       "adaptiveIcon": {

@@ -43,3 +43,6 @@ yarn-error.*
 
 # playwright artifacts
 .playwright-mcp/
+
+# raw audio source directory
+ses/

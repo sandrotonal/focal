@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
+import { Asset } from 'expo-asset';
 import type { AudioPlayer } from 'expo-audio';
-import type { SoundAlertTone } from '../storage/preferencesStorage';
+import type { AmbientSoundType, SoundAlertTone } from '../storage/preferencesStorage';
+
+export type { AmbientSoundType };
 
 type WebAudioWindow = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
@@ -14,7 +17,11 @@ const TICK_THROTTLE_MS = 45;
 
 export function setSoundEnabled(enabled: boolean): void {
   isSoundEnabled = enabled;
+  if (!enabled) {
+    stopAmbientSound();
+  }
 }
+
 
 export function getSoundEnabled(): boolean {
   return isSoundEnabled;
@@ -31,7 +38,11 @@ const SOUND_ASSETS: Record<
   | 'focusCompleteClarity'
   | 'focusCompleteMechanical'
   | 'breakComplete'
-  | 'reset',
+  | 'reset'
+  | 'ambientBrown'
+  | 'ambientRain'
+  | 'ambientStorm'
+  | 'ambientOcean',
   number
 > = {
   tick: require('../../assets/sounds/tick.wav'),
@@ -44,7 +55,12 @@ const SOUND_ASSETS: Record<
   focusCompleteMechanical: require('../../assets/sounds/focus_complete_mechanical.wav'),
   breakComplete: require('../../assets/sounds/break_complete.wav'),
   reset: require('../../assets/sounds/reset.wav'),
+  ambientBrown: require('../../assets/sounds/ambient_brown.wav'),
+  ambientRain: require('../../assets/sounds/ambient_rain.wav'),
+  ambientStorm: require('../../assets/sounds/ambient_storm.wav'),
+  ambientOcean: require('../../assets/sounds/ambient_ocean.wav'),
 };
+
 
 type SoundKey = keyof typeof SOUND_ASSETS;
 
@@ -248,6 +264,8 @@ export function cleanupAudioEngine(): void {
     }
     delete nativePlayerCache[key];
   }
+
+  stopAmbientSound();
 }
 
 /* ---------------- Web Audio Synthesis ---------------- */
@@ -692,4 +710,338 @@ export function playResetSound(): void {
   }
   void playNativeSound('reset');
 }
+
+/* ---------------- Continuous Ambient Soundscapes ---------------- */
+
+let webAmbientSource: AudioBufferSourceNode | null = null;
+let webAmbientGain: GainNode | null = null;
+let webAmbientType: AmbientSoundType = 'none';
+
+const cachedAmbientBuffers: Partial<Record<AmbientSoundType, AudioBuffer>> = {};
+const loadingAmbientPromises: Partial<Record<AmbientSoundType, Promise<AudioBuffer | null>>> = {};
+
+async function loadRealAmbientBuffer(
+  ctx: AudioContext,
+  type: 'rain' | 'storm' | 'ocean'
+): Promise<AudioBuffer | null> {
+  const cached = cachedAmbientBuffers[type];
+  if (cached) {
+    return cached;
+  }
+  const pending = loadingAmbientPromises[type];
+  if (pending) {
+    return pending;
+  }
+
+  const assetKey: SoundKey =
+    type === 'storm'
+      ? 'ambientStorm'
+      : type === 'ocean'
+        ? 'ambientOcean'
+        : 'ambientRain';
+
+  const loadPromise = (async () => {
+    try {
+      const asset = Asset.fromModule(SOUND_ASSETS[assetKey]);
+      await asset.downloadAsync();
+      const uri = asset.uri || asset.localUri;
+      if (!uri) throw new Error(`No URI for ${assetKey} asset`);
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      cachedAmbientBuffers[type] = audioBuffer;
+      delete loadingAmbientPromises[type];
+      return audioBuffer;
+    } catch {
+      delete loadingAmbientPromises[type];
+      return null;
+    }
+  })();
+
+  loadingAmbientPromises[type] = loadPromise;
+  return loadPromise;
+}
+
+function createBrownNoiseBuffer(ctx: AudioContext): AudioBuffer {
+  const bufferSize = ctx.sampleRate * 5;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let brown = 0.0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    brown = (brown + 0.03 * white) / 1.025;
+    data[i] = brown * 2.8;
+  }
+  return buffer;
+}
+
+/**
+ * Natural organic rain fallback buffer (pure water wash, strictly zero frying/clicking transients)
+ */
+function createOrganicRainFallbackBuffer(ctx: AudioContext): AudioBuffer {
+  const durationSeconds = 8.0;
+  const bufferSize = Math.floor(ctx.sampleRate * durationSeconds);
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // Soft pink noise bed with gentle 1.2kHz lowpass characteristic (water sound)
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.96900 * b2 + white * 0.1538520;
+    b3 = 0.86650 * b3 + white * 0.3104856;
+    b4 = 0.55000 * b4 + white * 0.5329522;
+    b5 = -0.7616 * b5 - white * 0.0168980;
+    const pink = (b0 + b1 + b2 + b3 + b4 + b5 + white * 0.5362) * 0.08;
+
+    // Organic breathing wave modulation (0.18 Hz) simulating natural rain gusts
+    const t = i / ctx.sampleRate;
+    const swell = 0.85 + 0.15 * Math.sin(2 * Math.PI * 0.18 * t);
+    data[i] = pink * swell;
+  }
+
+  // Seamless equal-power crossfade loop
+  const crossfadeSamples = Math.floor(ctx.sampleRate * 0.8);
+  for (let i = 0; i < crossfadeSamples; i++) {
+    const progress = i / crossfadeSamples;
+    const endIdx = bufferSize - crossfadeSamples + i;
+    const blended = data[i] * progress + data[endIdx] * (1 - progress);
+    data[i] = blended;
+    data[endIdx] = blended;
+  }
+
+  return buffer;
+}
+
+function playWebAmbientBuffer(ctx: AudioContext, buffer: AudioBuffer, type: AmbientSoundType): void {
+  try {
+    if (webAmbientSource) {
+      try {
+        webAmbientSource.stop();
+        webAmbientSource.disconnect();
+      } catch {
+        // Safe cleanup
+      }
+      webAmbientSource = null;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    if (type === 'brown') {
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(420, ctx.currentTime);
+    } else if (type === 'storm') {
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(3800, ctx.currentTime);
+    } else {
+      filter.type = 'lowpass';
+      // Lowpass roll-off at 4500Hz prevents any harsh digital frequencies
+      filter.frequency.setValueAtTime(4500, ctx.currentTime);
+    }
+
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    const targetVolume = type === 'brown' ? 0.22 : type === 'storm' ? 0.26 : 0.22;
+    gain.gain.linearRampToValueAtTime(targetVolume, now + 1.2);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    source.start(now);
+    webAmbientSource = source;
+    webAmbientGain = gain;
+    webAmbientType = type;
+  } catch {
+    // Safe web fallback
+  }
+}
+
+function startWebAmbient(type: AmbientSoundType): void {
+  if (type === 'none' || !isSoundEnabled) {
+    stopWebAmbient();
+    return;
+  }
+  try {
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+    if (webAmbientSource && webAmbientType === type) return;
+    stopWebAmbient();
+
+    webAmbientType = type;
+
+    if (type === 'brown') {
+      const buffer = createBrownNoiseBuffer(ctx);
+      playWebAmbientBuffer(ctx, buffer, 'brown');
+    } else {
+      const cached = cachedAmbientBuffers[type];
+      if (cached) {
+        playWebAmbientBuffer(ctx, cached, type);
+      } else {
+        const fallback =
+          type === 'ocean'
+            ? createBrownNoiseBuffer(ctx)
+            : createOrganicRainFallbackBuffer(ctx);
+        playWebAmbientBuffer(ctx, fallback, type);
+        void loadRealAmbientBuffer(ctx, type).then((realBuffer) => {
+          if (realBuffer && webAmbientType === type) {
+            const currentCtx = getWebAudioContext();
+            if (currentCtx) {
+              playWebAmbientBuffer(currentCtx, realBuffer, type);
+            }
+          }
+        });
+      }
+    }
+  } catch {
+    // Safe web fallback
+  }
+}
+
+function stopWebAmbient(): void {
+  try {
+    if (!webAmbientGain || !webAmbientSource) {
+      webAmbientSource = null;
+      webAmbientGain = null;
+      webAmbientType = 'none';
+      return;
+    }
+    const ctx = getWebAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    webAmbientGain.gain.setValueAtTime(webAmbientGain.gain.value, now);
+    webAmbientGain.gain.linearRampToValueAtTime(0.0001, now + 0.8);
+    const src = webAmbientSource;
+    setTimeout(() => {
+      try {
+        src.stop();
+        src.disconnect();
+      } catch {
+        // Safe stop
+      }
+    }, 850);
+    webAmbientSource = null;
+    webAmbientGain = null;
+    webAmbientType = 'none';
+  } catch {
+    webAmbientSource = null;
+    webAmbientGain = null;
+    webAmbientType = 'none';
+  }
+}
+
+let nativeAmbientPlayer: AudioPlayer | null = null;
+let currentNativeAmbient: AmbientSoundType = 'none';
+
+function startNativeAmbient(type: AmbientSoundType): void {
+  if (type === 'none' || !isSoundEnabled) {
+    stopNativeAmbient();
+    return;
+  }
+  const audio = getExpoAudio();
+  if (!audio) return;
+  try {
+    void ensureAudioMode(audio);
+    if (nativeAmbientPlayer && currentNativeAmbient === type) {
+      nativeAmbientPlayer.play();
+      return;
+    }
+    stopNativeAmbient();
+
+    let key: SoundKey = 'ambientBrown';
+    if (type === 'rain') key = 'ambientRain';
+    else if (type === 'storm') key = 'ambientStorm';
+    else if (type === 'ocean') key = 'ambientOcean';
+    else key = 'ambientBrown';
+
+    const player = audio.createAudioPlayer(SOUND_ASSETS[key]);
+    player.loop = true;
+    player.volume = 0.75;
+    player.play();
+    nativeAmbientPlayer = player;
+    currentNativeAmbient = type;
+  } catch {
+    // Safe fallback
+  }
+}
+
+function stopNativeAmbient(): void {
+  try {
+    if (nativeAmbientPlayer) {
+      nativeAmbientPlayer.pause();
+      nativeAmbientPlayer.remove();
+      nativeAmbientPlayer = null;
+    }
+    currentNativeAmbient = 'none';
+  } catch {
+    nativeAmbientPlayer = null;
+    currentNativeAmbient = 'none';
+  }
+}
+
+/**
+ * Start seamless looping ambient focus soundscape with smooth fade-in
+ */
+export function startAmbientSound(type: AmbientSoundType): void {
+  if (Platform.OS === 'web') {
+    startWebAmbient(type);
+  } else {
+    startNativeAmbient(type);
+  }
+}
+
+/**
+ * Stop ambient soundscape with smooth fade-out
+ */
+export function stopAmbientSound(): void {
+  if (Platform.OS === 'web') {
+    stopWebAmbient();
+  } else {
+    stopNativeAmbient();
+  }
+}
+
+/**
+ * Play a gentle 2-second preview of the chosen ambient soundscape
+ */
+export function previewAmbientSound(type: AmbientSoundType): void {
+  if (type === 'none' || !isSoundEnabled) {
+    stopAmbientSound();
+    return;
+  }
+  startAmbientSound(type);
+  setTimeout(() => {
+    stopAmbientSound();
+  }, 2200);
+}
+
+/**
+ * Preload ambient sound assets (both Web AudioBuffer and native player)
+ */
+export function preloadAmbientSounds(): void {
+  if (Platform.OS === 'web') {
+    const ctx = getWebAudioContext();
+    if (ctx) {
+      void loadRealAmbientBuffer(ctx, 'rain');
+      void loadRealAmbientBuffer(ctx, 'storm');
+      void loadRealAmbientBuffer(ctx, 'ocean');
+    }
+  } else {
+    const audio = getExpoAudio();
+    if (!audio) return;
+    void ensureAudioMode(audio);
+    getOrCreatePlayer(audio, 'ambientBrown');
+    getOrCreatePlayer(audio, 'ambientRain');
+    getOrCreatePlayer(audio, 'ambientStorm');
+    getOrCreatePlayer(audio, 'ambientOcean');
+  }
+}
+
+
 
