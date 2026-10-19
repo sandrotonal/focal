@@ -104,7 +104,7 @@ async function ensureAudioMode(audio: typeof import('expo-audio')): Promise<void
 const nativePlayerCache: Partial<Record<SoundKey, AudioPlayer>> = {};
 
 // Dedicated round-robin player pool for rapid mechanical ticks to prevent buffer cut-off crackles
-const TICK_POOL_SIZE = 3;
+const TICK_POOL_SIZE = 4;
 const tickPlayerPool: AudioPlayer[] = [];
 let tickPoolIndex = 0;
 
@@ -113,7 +113,7 @@ function getTickPlayer(audio: typeof import('expo-audio')): AudioPlayer | null {
     try {
       while (tickPlayerPool.length < TICK_POOL_SIZE) {
         const player = audio.createAudioPlayer(SOUND_ASSETS.tick);
-        player.volume = 0.85;
+        player.volume = 1.0;
         tickPlayerPool.push(player);
       }
     } catch {
@@ -628,8 +628,8 @@ export function playFocusStartSound(): void {
 /**
  * Play focus completion tone with customizable tone palette
  */
-export function playFocusCompleteSound(tone: SoundAlertTone = 'crystal'): void {
-  if (!isSoundEnabled) return;
+export function playFocusCompleteSound(tone: SoundAlertTone = 'crystal', force = false): void {
+  if (!isSoundEnabled && !force) return;
   if (Platform.OS === 'web') {
     switch (tone) {
       case 'aurora':
@@ -675,10 +675,10 @@ export function playBreakCompleteSound(): void {
 }
 
 /**
- * Play a preview of the selected alert tone for immediate feedback
+ * Play a preview of the selected alert tone for immediate feedback (bypasses mute)
  */
 export function previewToneSound(tone: SoundAlertTone): void {
-  playFocusCompleteSound(tone);
+  playFocusCompleteSound(tone, true);
 }
 
 /**

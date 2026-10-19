@@ -100,14 +100,14 @@ export interface TranslationSchema {
     stageLongBreak: string;
     cycleBadge: (cycle: number, max?: number) => string;
     tapToToggle: string;
-    pullToReset: string;
-    releaseToReset: string;
     skipBreak: string;
     sessionCompleted: string;
     sessionCompletedDesc: string;
-    completedSessions: (count: number) => string;
     resetBadge: string;
     newSession: string;
+    startBreak: string;
+    tapToPauseBreak: string;
+    tapToStartBreak: string;
     now: string;
     dismiss: string;
     ariaStart: string;
@@ -170,8 +170,10 @@ export interface TranslationSchema {
     breakBody: string;
     pomodoroShortBreakTitle: string;
     pomodoroShortBreakBody: string;
+    pomodoroShortBreakBodyDynamic: (minutes: number) => string;
     pomodoroLongBreakTitle: string;
     pomodoroLongBreakBody: string;
+    pomodoroLongBreakBodyDynamic: (minutes: number) => string;
   };
 }
 
@@ -277,14 +279,14 @@ export const translations: Record<Language, TranslationSchema> = {
       stageLongBreak: 'UZUN MOLA',
       cycleBadge: (cycle: number, max: number = 4) => `DÖNGÜ ${cycle}/${max}`,
       tapToToggle: 'Dokunarak başlat / durdur',
-      pullToReset: 'Seansı sıfırlamak için aşağı çek',
-      releaseToReset: 'Bırak ve Sıfırla',
       skipBreak: 'Molayı Geç',
       sessionCompleted: 'Seans tamamlandı',
       sessionCompletedDesc: 'Hedeflenen odak süresine ulaştın.',
-      completedSessions: (count: number) => `Tamamlanan: ${count} seans`,
       resetBadge: 'SIFIRLA',
       newSession: 'Yeni Seans',
+      startBreak: 'Molayı Başlat',
+      tapToPauseBreak: 'Molayı duraklatmak için dokun',
+      tapToStartBreak: 'Molayı başlatmak için dokun',
       now: 'şimdi',
       dismiss: 'Kapat',
       ariaStart: 'Odaklanma sayacını başlat',
@@ -347,8 +349,10 @@ export const translations: Record<Language, TranslationSchema> = {
       breakBody: 'Zihnini tazeledin. Yeni odak seansına hazırsın.',
       pomodoroShortBreakTitle: 'Odak Seansı Tamamlandı',
       pomodoroShortBreakBody: 'Tebrikler! 5 dakikalık kısa dinlenme zamanı.',
+      pomodoroShortBreakBodyDynamic: (minutes: number) => `Tebrikler! ${minutes} dakikalık kısa dinlenme zamanı.`,
       pomodoroLongBreakTitle: '4 Odak Seansı Tamamlandı',
       pomodoroLongBreakBody: 'Mükemmel disiplin! 15 dakikalık uzun mola zamanı.',
+      pomodoroLongBreakBodyDynamic: (minutes: number) => `Mükemmel disiplin! ${minutes} dakikalık uzun mola zamanı.`,
     },
   },
   en: {
@@ -452,14 +456,14 @@ export const translations: Record<Language, TranslationSchema> = {
       stageLongBreak: 'LONG BREAK',
       cycleBadge: (cycle: number, max: number = 4) => `CYCLE ${cycle}/${max}`,
       tapToToggle: 'Tap to start / pause',
-      pullToReset: 'Pull down to reset session',
-      releaseToReset: 'Release to Reset',
       skipBreak: 'Skip Break',
       sessionCompleted: 'Session completed',
       sessionCompletedDesc: 'Target focus duration reached.',
-      completedSessions: (count: number) => `Completed: ${count} sessions`,
       resetBadge: 'RESET',
       newSession: 'New Session',
+      startBreak: 'Start Break',
+      tapToPauseBreak: 'Tap to pause break',
+      tapToStartBreak: 'Tap to start break',
       now: 'now',
       dismiss: 'Dismiss',
       ariaStart: 'Start focus timer',
@@ -522,8 +526,10 @@ export const translations: Record<Language, TranslationSchema> = {
       breakBody: 'Mind recharged. Ready for the next focus session.',
       pomodoroShortBreakTitle: 'Focus Session Completed',
       pomodoroShortBreakBody: 'Well done! Time for a 5-minute mindful break.',
+      pomodoroShortBreakBodyDynamic: (minutes: number) => `Well done! Time for a ${minutes}-minute short rest.`,
       pomodoroLongBreakTitle: '4 Focus Sessions Completed',
       pomodoroLongBreakBody: 'Superb discipline! Time for a 15-minute long break.',
+      pomodoroLongBreakBodyDynamic: (minutes: number) => `Outstanding discipline! Time for a ${minutes}-minute long break.`,
     },
   },
 };

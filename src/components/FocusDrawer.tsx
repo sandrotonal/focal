@@ -8,8 +8,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -17,6 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineSidebar } from './LineSidebar';
+import { ApplePressable } from './ui/ApplePressable';
 import { ModernSwitch } from './ui/ModernSwitch';
 import { RhythmOptionWheel, type RhythmPreset } from './ui/RhythmOptionWheel';
 import Svg, { Path } from 'react-native-svg';
@@ -47,11 +50,13 @@ export type FocusDrawerProps = {
   soundEnabled: boolean;
   pomodoroEnabled: boolean;
   pomodoroCycle?: number;
+  pomodoroFocusMinutes?: number;
   pomodoroShortBreakMinutes?: number;
   pomodoroLongBreakMinutes?: number;
   soundAlertTone: SoundAlertTone;
   completedSessions: number;
   totalFocusMinutes: number;
+  weeklyHistory?: number[];
   colors: AppColors;
   onClose: () => void;
   onSelect: (index: number) => void;
@@ -85,6 +90,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   notificationsEnabled,
   soundEnabled,
   pomodoroEnabled,
+  pomodoroFocusMinutes = 25,
   pomodoroShortBreakMinutes = 5,
   pomodoroLongBreakMinutes = 15,
   soundAlertTone,
@@ -107,6 +113,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   onSelectSoundTone,
   completedSessions,
   totalFocusMinutes,
+  weeklyHistory = [0, 0, 0, 0, 0, 0, 0],
 }: FocusDrawerProps) {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(-drawerWidth);
@@ -142,6 +149,38 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   const scrimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(translateX.value, [-drawerWidth, 0], [0, 1]),
   }));
+
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-12, 12])
+        .failOffsetY([-18, 18])
+        .onUpdate((event) => {
+          if (event.translationX <= 0) {
+            translateX.value = Math.max(-drawerWidth, event.translationX);
+          }
+        })
+        .onEnd((event) => {
+          const shouldClose =
+            event.translationX < -drawerWidth * 0.25 || event.velocityX < -400;
+          if (shouldClose) {
+            translateX.value = withSpring(
+              -drawerWidth,
+              { damping: 26, stiffness: 280, velocity: event.velocityX },
+              () => {
+                runOnJS(onClose)();
+              }
+            );
+          } else {
+            translateX.value = withSpring(0, {
+              damping: 24,
+              stiffness: 260,
+              velocity: event.velocityX,
+            });
+          }
+        }),
+    [drawerWidth, onClose, translateX]
+  );
 
   // Deterministic 7-day rhythm distribution (active today highlighted)
   const currentDayIndex = useMemo(() => {
@@ -200,12 +239,12 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   const activePresetId = useMemo(() => {
     const matched = rhythmPresets.find(
       (p) =>
-        p.focus === sessionMinutes &&
+        p.focus === pomodoroFocusMinutes &&
         p.shortM === pomodoroShortBreakMinutes &&
         p.longM === pomodoroLongBreakMinutes
     );
     return matched?.id ?? '';
-  }, [rhythmPresets, sessionMinutes, pomodoroShortBreakMinutes, pomodoroLongBreakMinutes]);
+  }, [rhythmPresets, pomodoroFocusMinutes, pomodoroShortBreakMinutes, pomodoroLongBreakMinutes]);
 
   return (
     <>
@@ -221,194 +260,313 @@ export const FocusDrawer = React.memo(function FocusDrawer({
         />
       </Animated.View>
 
-      <Animated.View
-        accessibilityViewIsModal={visible}
-        accessibilityElementsHidden={!visible}
-        importantForAccessibility={visible ? 'yes' : 'no-hide-descendants'}
-        aria-hidden={!visible}
-        style={[styles.drawer, { width: drawerWidth, backgroundColor: colors.panel }, drawerStyle]}
-      >
-        <View style={[styles.drawerContent, { paddingTop: insets.top + 22 }]}>
-          <View style={styles.drawerHeader}>
-            <View style={styles.drawerBrand}>
-              <Image
-                source={require('../../assets/focal-logo.png')}
-                style={styles.drawerLogo}
-                resizeMode="contain"
-                accessible
-                accessibilityLabel="Focal Logo"
-              />
-              <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.mainTimer.ariaMenuClose}
-              hitSlop={12}
-              onPress={onClose}
-              style={({ pressed }) => [styles.closeButton, pressed && styles.itemPressed]}
-            >
-              <View style={[styles.closeLine, styles.closeLineFirst, { backgroundColor: colors.secondary }]} />
-              <View style={[styles.closeLine, styles.closeLineSecond, { backgroundColor: colors.secondary }]} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.drawerScrollView}
-            contentContainerStyle={[
-              styles.drawerScrollContent,
-              { paddingBottom: insets.bottom + 48 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            bounces={true}
-          >
-            <LineSidebar
-              items={menuItems}
-              activeIndex={activeIndex}
-              onSelect={onSelect}
-              colors={colors}
-            />
-
-          {activeIndex === 0 && (
-            <View style={styles.drawerSummary}>
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryBlock}>
-                  <Text style={[styles.summaryValue, { color: colors.primary }]}>{completedSessions}</Text>
-                  <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.sessions}</Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: colors.hairline }]} />
-                <View style={styles.summaryBlock}>
-                  <Text style={[styles.summaryValue, { color: colors.primary }]}>{totalFocusMinutes}</Text>
-                  <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.minutes}</Text>
-                </View>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          accessibilityViewIsModal={visible}
+          accessibilityElementsHidden={!visible}
+          importantForAccessibility={visible ? 'yes' : 'no-hide-descendants'}
+          aria-hidden={!visible}
+          style={[styles.drawer, { width: drawerWidth, backgroundColor: colors.panel }, drawerStyle]}
+        >
+          <View style={[styles.drawerContent, { paddingTop: insets.top + 22 }]}>
+            <View style={styles.drawerHeader}>
+              <View style={styles.drawerBrand}>
+                <Image
+                  source={require('../../assets/focal-logo.png')}
+                  style={styles.drawerLogo}
+                  resizeMode="contain"
+                  accessible
+                  accessibilityLabel="Focal Logo"
+                />
+                <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
               </View>
+              <ApplePressable
+                accessibilityRole="button"
+                accessibilityLabel={t.mainTimer.ariaMenuClose}
+                hitSlop={12}
+                onPress={onClose}
+                activeScale={0.88}
+                style={styles.closeButton}
+              >
+                <View style={[styles.closeLine, styles.closeLineFirst, { backgroundColor: colors.secondary }]} />
+                <View style={[styles.closeLine, styles.closeLineSecond, { backgroundColor: colors.secondary }]} />
+              </ApplePressable>
+            </View>
 
-              {/* Minimalist 7-Day Weekly Rhythm (Apple / Dieter Rams 1px hairlines) */}
-              <View style={styles.weeklyRhythmContainer}>
-                <View style={styles.weeklyBarsRow}>
-                  {weekDayLabels.map((dayLabel, index) => {
-                    const isToday = index === currentDayIndex;
-                    // Proportional micro-fill based on totalFocusMinutes and completedSessions
-                    const barHeight = isToday
-                      ? Math.min(36, Math.max(12, Math.round((totalFocusMinutes % 30) + 12)))
-                      : (index * 7) % 24 + 6;
+            <ScrollView
+              style={styles.drawerScrollView}
+              contentContainerStyle={[
+                styles.drawerScrollContent,
+                { paddingBottom: insets.bottom + 48 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              bounces={true}
+            >
+              <LineSidebar
+                items={menuItems}
+                activeIndex={activeIndex}
+                onSelect={onSelect}
+                colors={colors}
+              />
 
-                    return (
-                      <View key={dayLabel} style={styles.weekdayCol}>
-                        <View style={styles.barTrack}>
-                          <View
+            {activeIndex === 0 && (
+              <View style={styles.drawerSummary}>
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryBlock}>
+                    <Text style={[styles.summaryValue, { color: colors.primary }]}>{completedSessions}</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.sessions}</Text>
+                  </View>
+                  <View style={[styles.summaryDivider, { backgroundColor: colors.hairline }]} />
+                  <View style={styles.summaryBlock}>
+                    <Text style={[styles.summaryValue, { color: colors.primary }]}>{totalFocusMinutes}</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.minutes}</Text>
+                  </View>
+                </View>
+
+                {/* Minimalist 7-Day Weekly Rhythm (Apple / Dieter Rams 1px hairlines) */}
+                <View style={styles.weeklyRhythmContainer}>
+                  <View style={styles.weeklyBarsRow}>
+                    {weekDayLabels.map((dayLabel, index) => {
+                      const isToday = index === currentDayIndex;
+                      const dayMinutes = weeklyHistory[index] ?? 0;
+                      // Proportional micro-fill based on authentic weekly history (60m = 36px full bar, 0m = 3px baseline tick)
+                      const barHeight = dayMinutes > 0
+                        ? Math.min(36, Math.max(6, Math.round((dayMinutes / 60) * 36)))
+                        : 3;
+
+                      return (
+                        <View key={dayLabel} style={styles.weekdayCol}>
+                          <View style={styles.barTrack}>
+                            <View
+                              style={[
+                                styles.barFill,
+                                {
+                                  height: barHeight,
+                                  backgroundColor: isToday
+                                    ? colors.accent
+                                    : (dayMinutes > 0 ? colors.secondary : colors.hairline),
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text
                             style={[
-                              styles.barFill,
+                              styles.weekdayText,
                               {
-                                height: barHeight,
-                                backgroundColor: isToday ? colors.accent : colors.hairline,
+                                color: isToday ? colors.primary : colors.muted,
+                                fontWeight: isToday ? '600' : '400',
                               },
                             ]}
-                          />
+                          >
+                            {dayLabel}
+                          </Text>
                         </View>
-                        <Text
-                          style={[
-                            styles.weekdayText,
-                            {
-                              color: isToday ? colors.primary : colors.muted,
-                              fontWeight: isToday ? '600' : '400',
-                            },
-                          ]}
-                        >
-                          {dayLabel}
-                        </Text>
-                      </View>
-                    );
-                  })}
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
-            </View>
-          )}
 
-          {activeIndex !== 0 && <View style={[styles.drawerRule, { backgroundColor: colors.hairline }]} />}
+                {completedSessions === 0 && (
+                  <View style={[styles.emptyStateBanner, { borderColor: colors.hairline }]}>
+                    <Text style={[styles.emptyStateText, { color: colors.secondary }]}>
+                      {language === 'tr'
+                        ? 'İlk odak seansını tamamlayarak haftalık ritmini başlat.'
+                        : 'Complete your first focus session to build your weekly rhythm.'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {activeIndex !== 0 && <View style={[styles.drawerRule, { backgroundColor: colors.hairline }]} />}
 
           {activeIndex === 1 && (
             <View style={styles.drawerSection}>
-              {/* Unit Selector: Dakika / Saniye */}
-              <View style={[styles.unitSelectorRow, { borderColor: colors.hairline, backgroundColor: colors.background }]}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t.drawer.sections.unitMinutes}
-                  onPress={() => onChangeDurationUnit('minutes')}
-                  style={[
-                    styles.unitTab,
-                    durationUnit === 'minutes' && { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 1 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.unitTabText,
-                      { color: durationUnit === 'minutes' ? colors.primary : colors.muted },
-                    ]}
-                  >
-                    {t.drawer.sections.unitMinutes.toUpperCase()}
+              {/* Pomodoro Active Status Banner */}
+              {pomodoroEnabled && (
+                <View style={[styles.pomodoroActiveBadgeRow, { borderBottomColor: colors.hairline }]}>
+                  <View style={[styles.pomodoroActiveDot, { backgroundColor: colors.accent }]} />
+                  <Text style={[styles.pomodoroActiveText, { color: colors.secondary }]}>
+                    {language === 'tr'
+                      ? 'Pomodoro ritim modu devrede. Buradan bir süre seçtiğinde standart odak sayacına geçilir.'
+                      : 'Pomodoro rhythm mode is active. Selecting a duration switches to standard focus timer.'}
                   </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t.drawer.sections.unitSeconds}
-                  onPress={() => onChangeDurationUnit('seconds')}
-                  style={[
-                    styles.unitTab,
-                    durationUnit === 'seconds' && { backgroundColor: colors.panel, borderColor: colors.accent, borderWidth: 1 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.unitTabText,
-                      { color: durationUnit === 'seconds' ? colors.primary : colors.muted },
-                    ]}
-                  >
-                    {t.drawer.sections.unitSeconds.toUpperCase()}
-                  </Text>
-                </Pressable>
-              </View>
+                </View>
+              )}
 
-              <View style={styles.durationEditor}>
-                <TextInput
-                  accessibilityLabel={t.drawer.sections.focusDuration}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  onBlur={onCommitDuration}
-                  onChangeText={onDurationDraftChange}
-                  onSubmitEditing={onCommitDuration}
-                  returnKeyType="done"
-                  selectTextOnFocus
-                  style={[styles.durationInput, { color: colors.primary, borderBottomColor: colors.hairline }]}
-                  value={durationDraft}
-                />
-                <Text style={[styles.durationUnit, { color: colors.secondary }]}>
-                  {durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort}
+              {/* Saniye Modu Switch - Unified with the rest of the drawer */}
+              <Pressable
+                accessible
+                accessibilityRole="switch"
+                accessibilityState={{ checked: durationUnit === 'seconds' }}
+                accessibilityLabel={language === 'tr' ? 'Hassas Saniye Modu' : 'Precision Seconds Mode'}
+                onPress={() => onChangeDurationUnit(durationUnit === 'seconds' ? 'minutes' : 'seconds')}
+                style={({ pressed }) => [
+                  styles.settingRow,
+                  { borderBottomColor: colors.hairline, marginTop: 4 },
+                  pressed && styles.itemPressed,
+                ]}
+              >
+                <View style={styles.settingTextGroup}>
+                  <Text style={[styles.settingValue, { color: colors.primary }]}>
+                    {language === 'tr' ? 'Hassas Saniye Modu' : 'Precision Seconds Mode'}
+                  </Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                    {language === 'tr' ? 'Kısa sprintler ve hassas zamanlama' : 'Short sprints & precision intervals'}
+                  </Text>
+                </View>
+                <View pointerEvents="none">
+                  <ModernSwitch
+                    value={durationUnit === 'seconds'}
+                    onValueChange={() => {}}
+                    checkedBg={colors.accent}
+                    uncheckedBg={colors.hairline}
+                    crossColor={colors.muted}
+                    checkmarkColor="#FFFFFF"
+                    accessibilityLabel={language === 'tr' ? 'Hassas Saniye Modu' : 'Precision Seconds Mode'}
+                  />
+                </View>
+              </Pressable>
+
+              {/* Section Header */}
+              <View style={styles.durationListHeaderRow}>
+                <Text style={[styles.durationListHeader, { color: colors.muted }]}>
+                  {durationUnit === 'seconds'
+                    ? (language === 'tr' ? 'SANİYE SPRINT SEÇENEKLERİ' : 'SPRINT INTERVAL OPTIONS')
+                    : (language === 'tr' ? 'ODAK SÜRESİ SEÇENEKLERİ' : 'FOCUS DURATION OPTIONS')}
                 </Text>
               </View>
 
-              <View style={styles.presetRow}>
-                {(durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES).map((option) => {
-                  const isSelected = durationUnit === 'seconds' ? option === sessionSeconds : option === sessionMinutes;
-                  const unitLabel = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
-                  return (
-                    <Pressable
-                      key={option}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${option} ${unitLabel}`}
-                      onPress={() => onSelectPreset(option)}
-                      style={({ pressed }) => [
-                        styles.preset,
-                        { borderBottomColor: isSelected ? colors.accent : colors.hairline },
-                        pressed && styles.itemPressed,
-                      ]}
-                    >
-                      <Text style={[styles.presetText, { color: isSelected ? colors.primary : colors.secondary }]}>
-                        {option}
+              {/* Apple Settings Clean List of Durations with Checkmark */}
+              {(durationUnit === 'seconds'
+                ? [
+                    { value: 15, subtitle: language === 'tr' ? 'Mikro test sprinti' : 'Micro sprint test' },
+                    { value: 30, subtitle: language === 'tr' ? 'Hızlı kontrol döngüsü' : 'Fast check cycle' },
+                    { value: 45, subtitle: language === 'tr' ? 'Genişletilmiş test periyodu' : 'Extended test period' },
+                    { value: 60, subtitle: language === 'tr' ? '1 dakikalık tam sprint' : '1-minute full sprint' },
+                  ]
+                : [
+                    { value: 15, subtitle: language === 'tr' ? 'Hızlı odak ve kısa sprint' : 'Quick focus & short sprint' },
+                    { value: 25, subtitle: language === 'tr' ? 'Klasik Pomodoro standardı' : 'Classic Pomodoro standard' },
+                    { value: 45, subtitle: language === 'tr' ? 'Derin çalışma ve akış bloğu' : 'Deep work & flow block' },
+                    { value: 60, subtitle: language === 'tr' ? 'İleri seviye maraton odağı' : 'Extended focus marathon' },
+                  ]
+              ).map(({ value, subtitle }) => {
+                const currentVal = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes;
+                const standardOptions = durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES;
+                const isCustom = !standardOptions.includes(currentVal);
+                const isSelected = !pomodoroEnabled && !isCustom && currentVal === value;
+                const unitSuffix = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
+
+                return (
+                  <Pressable
+                    key={value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${value} ${unitSuffix}`}
+                    onPress={() => onSelectPreset(value)}
+                    style={({ pressed }) => [
+                      styles.settingRow,
+                      { borderBottomColor: colors.hairline },
+                      pressed && styles.itemPressed,
+                    ]}
+                  >
+                    <View style={styles.settingTextGroup}>
+                      <Text
+                        style={[
+                          styles.settingValue,
+                          {
+                            color: isSelected ? colors.primary : colors.secondary,
+                            fontWeight: isSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {value} {unitSuffix}
                       </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                      <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                        {subtitle}
+                      </Text>
+                    </View>
+
+                    {isSelected ? (
+                      <View style={styles.toneCheckmarkWrapper}>
+                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M5 13l4 4L19 7"
+                            stroke={colors.accent}
+                            strokeWidth={2.4}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </View>
+                    ) : (
+                      <View style={styles.toneCheckmarkPlaceholder} />
+                    )}
+                  </Pressable>
+                );
+              })}
+
+              {/* Dedicated Custom Duration Setting Row */}
+              {(() => {
+                const currentVal = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes;
+                const standardOptions = durationUnit === 'seconds' ? SESSION_OPTIONS_SECONDS : SESSION_OPTIONS_MINUTES;
+                const isCustom = !standardOptions.includes(currentVal);
+                const isCustomSelected = !pomodoroEnabled && isCustom;
+                const unitSuffix = durationUnit === 'seconds' ? t.common.secondShort : t.common.minuteShort;
+
+                return (
+                  <View
+                    style={[
+                      styles.settingRow,
+                      { borderBottomColor: colors.hairline },
+                    ]}
+                  >
+                    <View style={styles.settingTextGroup}>
+                      <Text
+                        style={[
+                          styles.settingValue,
+                          {
+                            color: isCustomSelected ? colors.primary : colors.secondary,
+                            fontWeight: isCustomSelected ? '600' : '400',
+                          },
+                        ]}
+                      >
+                        {t.drawer.sections.customDuration}
+                      </Text>
+                      <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
+                        {durationUnit === 'seconds'
+                          ? (language === 'tr' ? '5 ile 3600 sn arası serbest değer' : 'Free value between 5 and 3600s')
+                          : (language === 'tr' ? '1 ile 180 dk arası serbest değer' : 'Free value between 1 and 180m')}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customInputRow}>
+                      <TextInput
+                        accessibilityLabel={t.drawer.sections.customDuration}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        onBlur={onCommitDuration}
+                        onChangeText={onDurationDraftChange}
+                        onSubmitEditing={onCommitDuration}
+                        returnKeyType="done"
+                        selectTextOnFocus
+                        style={[
+                          styles.customInputBox,
+                          {
+                            color: colors.primary,
+                            borderColor: isCustomSelected ? colors.accent : colors.hairline,
+                            backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+                          },
+                        ]}
+                        value={durationDraft}
+                      />
+                      <Text style={[styles.customInputUnitText, { color: colors.muted }]}>
+                        {unitSuffix}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
             </View>
           )}
 
@@ -459,7 +617,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                       </Text>
                       <View style={styles.rhythmValueInline}>
                         <Text style={[styles.rhythmCadenceNumber, { color: colors.primary }]}>
-                          {sessionMinutes}
+                          {pomodoroFocusMinutes}
                         </Text>
                         <Text style={[styles.rhythmCadenceUnit, { color: colors.secondary }]}>
                           {t.common.minuteShort}
@@ -541,7 +699,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                                 { color: isSel ? colors.primary : colors.muted },
                               ]}
                             >
-                              {mins}m
+                              {mins} {t.common.minuteShort}
                             </Text>
                           </Pressable>
                         );
@@ -580,7 +738,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                                 { color: isSel ? colors.primary : colors.muted },
                               ]}
                             >
-                              {mins}m
+                              {mins} {t.common.minuteShort}
                             </Text>
                           </Pressable>
                         );
@@ -838,6 +996,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
           </ScrollView>
         </View>
       </Animated.View>
+    </GestureDetector>
     </>
   );
 });
@@ -1001,62 +1160,56 @@ const styles = StyleSheet.create({
   itemPressed: {
     opacity: 0.55,
   },
-  unitSelectorRow: {
+  pomodoroActiveBadgeRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    marginBottom: 4,
+  },
+  pomodoroActiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  pomodoroActiveText: {
+    flex: 1,
+    fontFamily: 'System',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
+  },
+  durationListHeaderRow: {
+    paddingTop: 20,
+    paddingBottom: 6,
+  },
+  durationListHeader: {
+    fontFamily: 'System',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  customInputBox: {
+    width: 58,
+    height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    padding: 3,
-    marginBottom: 8,
-    gap: 4,
-  },
-  unitTab: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unitTabText: {
     fontFamily: 'System',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 0,
+    paddingHorizontal: 4,
   },
-  durationEditor: {
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  durationInput: {
-    width: 88,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
+  customInputUnitText: {
     fontFamily: 'System',
-    fontSize: 28,
-    fontWeight: '300',
-    letterSpacing: -0.6,
-  },
-  durationUnit: {
-    marginLeft: 10,
-    marginBottom: 10,
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: '400',
-  },
-  presetRow: {
-    marginTop: 20,
-    flexDirection: 'row',
-    gap: 24,
-  },
-  preset: {
-    minWidth: 36,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    alignItems: 'center',
-  },
-  presetText: {
-    fontFamily: 'System',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   pomodoroFramelessContainer: {
@@ -1102,36 +1255,6 @@ const styles = StyleSheet.create({
   rhythmCadenceDivider: {
     width: 1,
     height: 34,
-  },
-  framelessRhythmRow: {
-    flexDirection: 'row',
-    marginTop: 18,
-    marginBottom: 8,
-    justifyContent: 'space-between',
-  },
-  framelessRhythmCol: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  framelessRhythmRatio: {
-    fontFamily: 'System',
-    fontSize: 18,
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  framelessRhythmName: {
-    fontFamily: 'System',
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  framelessRhythmIndicator: {
-    width: 24,
-    height: 2,
-    borderRadius: 1,
   },
   inlinePresetPillRow: {
     flexDirection: 'row',
@@ -1185,5 +1308,20 @@ const styles = StyleSheet.create({
   toneCheckmarkPlaceholder: {
     width: 28,
     height: 28,
+  },
+  emptyStateBanner: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontFamily: 'System',
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    fontWeight: '400',
   },
 });

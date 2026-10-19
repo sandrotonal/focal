@@ -457,12 +457,6 @@ export const CapsuleCtaButton: React.FC<{
   );
 });
 
-// Backward compatibility aliases
-export const ArtworkFocusCore3D = ArtworkSundialDesk;
-export const ArtworkRhythmPicker = PreferencesToggleList;
-export const ArtworkNotificationPrePermission = ArtworkAcousticWaves;
-export const ArtworkPlanSummary = PreferencesToggleList;
-
 const styles = StyleSheet.create({
   artworkContainer: {
     overflow: 'hidden',

@@ -36,7 +36,7 @@ import { translations, Language } from '../../i18n/translations';
 type Props = {
   colors: AppColors;
   initialLanguage?: Language;
-  onComplete: (preferences: FocusPreferences) => void;
+  onComplete: (preferences: Partial<FocusPreferences>) => void;
 };
 
 const TOTAL_STEPS = 3;

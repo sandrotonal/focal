@@ -14,17 +14,32 @@ const STORAGE_KEY = 'focal.timer';
 const LEGACY_STORAGE_KEY = 'focus-engine.timer';
 
 const memoryCache = new Map<string, string>();
+let initPromise: Promise<TimerState> | null = null;
+
+export function initTimerStorage(): Promise<TimerState> {
+  if (initPromise) {
+    return initPromise;
+  }
+
+  initPromise = (async () => {
+    try {
+      const stores = await AsyncStorage.multiGet([STORAGE_KEY, LEGACY_STORAGE_KEY]);
+      stores.forEach(([key, value]) => {
+        if (value) {
+          memoryCache.set(key, value);
+        }
+      });
+      return loadTimerState();
+    } catch {
+      return loadTimerState();
+    }
+  })();
+
+  return initPromise;
+}
 
 // Pre-populate memory cache from AsyncStorage on app launch
-void AsyncStorage.multiGet([STORAGE_KEY, LEGACY_STORAGE_KEY])
-  .then((stores) => {
-    stores.forEach(([key, value]) => {
-      if (value) {
-        memoryCache.set(key, value);
-      }
-    });
-  })
-  .catch(() => {});
+void initTimerStorage();
 
 export function loadTimerState(): TimerState {
   const serialized = memoryCache.get(STORAGE_KEY) ?? memoryCache.get(LEGACY_STORAGE_KEY);
