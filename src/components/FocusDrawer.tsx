@@ -8,8 +8,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -17,6 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineSidebar } from './LineSidebar';
+import { ApplePressable } from './ui/ApplePressable';
 import { ModernSwitch } from './ui/ModernSwitch';
 import { RhythmOptionWheel, type RhythmPreset } from './ui/RhythmOptionWheel';
 import Svg, { Path } from 'react-native-svg';
@@ -147,6 +150,38 @@ export const FocusDrawer = React.memo(function FocusDrawer({
     opacity: interpolate(translateX.value, [-drawerWidth, 0], [0, 1]),
   }));
 
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-12, 12])
+        .failOffsetY([-18, 18])
+        .onUpdate((event) => {
+          if (event.translationX <= 0) {
+            translateX.value = Math.max(-drawerWidth, event.translationX);
+          }
+        })
+        .onEnd((event) => {
+          const shouldClose =
+            event.translationX < -drawerWidth * 0.25 || event.velocityX < -400;
+          if (shouldClose) {
+            translateX.value = withSpring(
+              -drawerWidth,
+              { damping: 26, stiffness: 280, velocity: event.velocityX },
+              () => {
+                runOnJS(onClose)();
+              }
+            );
+          } else {
+            translateX.value = withSpring(0, {
+              damping: 24,
+              stiffness: 260,
+              velocity: event.velocityX,
+            });
+          }
+        }),
+    [drawerWidth, onClose, translateX]
+  );
+
   // Deterministic 7-day rhythm distribution (active today highlighted)
   const currentDayIndex = useMemo(() => {
     const day = new Date().getDay();
@@ -225,113 +260,125 @@ export const FocusDrawer = React.memo(function FocusDrawer({
         />
       </Animated.View>
 
-      <Animated.View
-        accessibilityViewIsModal={visible}
-        accessibilityElementsHidden={!visible}
-        importantForAccessibility={visible ? 'yes' : 'no-hide-descendants'}
-        aria-hidden={!visible}
-        style={[styles.drawer, { width: drawerWidth, backgroundColor: colors.panel }, drawerStyle]}
-      >
-        <View style={[styles.drawerContent, { paddingTop: insets.top + 22 }]}>
-          <View style={styles.drawerHeader}>
-            <View style={styles.drawerBrand}>
-              <Image
-                source={require('../../assets/focal-logo.png')}
-                style={styles.drawerLogo}
-                resizeMode="contain"
-                accessible
-                accessibilityLabel="Focal Logo"
-              />
-              <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t.mainTimer.ariaMenuClose}
-              hitSlop={12}
-              onPress={onClose}
-              style={({ pressed }) => [styles.closeButton, pressed && styles.itemPressed]}
-            >
-              <View style={[styles.closeLine, styles.closeLineFirst, { backgroundColor: colors.secondary }]} />
-              <View style={[styles.closeLine, styles.closeLineSecond, { backgroundColor: colors.secondary }]} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            style={styles.drawerScrollView}
-            contentContainerStyle={[
-              styles.drawerScrollContent,
-              { paddingBottom: insets.bottom + 48 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            bounces={true}
-          >
-            <LineSidebar
-              items={menuItems}
-              activeIndex={activeIndex}
-              onSelect={onSelect}
-              colors={colors}
-            />
-
-          {activeIndex === 0 && (
-            <View style={styles.drawerSummary}>
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryBlock}>
-                  <Text style={[styles.summaryValue, { color: colors.primary }]}>{completedSessions}</Text>
-                  <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.sessions}</Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: colors.hairline }]} />
-                <View style={styles.summaryBlock}>
-                  <Text style={[styles.summaryValue, { color: colors.primary }]}>{totalFocusMinutes}</Text>
-                  <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.minutes}</Text>
-                </View>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View
+          accessibilityViewIsModal={visible}
+          accessibilityElementsHidden={!visible}
+          importantForAccessibility={visible ? 'yes' : 'no-hide-descendants'}
+          aria-hidden={!visible}
+          style={[styles.drawer, { width: drawerWidth, backgroundColor: colors.panel }, drawerStyle]}
+        >
+          <View style={[styles.drawerContent, { paddingTop: insets.top + 22 }]}>
+            <View style={styles.drawerHeader}>
+              <View style={styles.drawerBrand}>
+                <Image
+                  source={require('../../assets/focal-logo.png')}
+                  style={styles.drawerLogo}
+                  resizeMode="contain"
+                  accessible
+                  accessibilityLabel="Focal Logo"
+                />
+                <Text style={[styles.drawerTitle, { color: colors.primary }]}>{t.drawer.title}</Text>
               </View>
+              <ApplePressable
+                accessibilityRole="button"
+                accessibilityLabel={t.mainTimer.ariaMenuClose}
+                hitSlop={12}
+                onPress={onClose}
+                activeScale={0.88}
+                style={styles.closeButton}
+              >
+                <View style={[styles.closeLine, styles.closeLineFirst, { backgroundColor: colors.secondary }]} />
+                <View style={[styles.closeLine, styles.closeLineSecond, { backgroundColor: colors.secondary }]} />
+              </ApplePressable>
+            </View>
 
-              {/* Minimalist 7-Day Weekly Rhythm (Apple / Dieter Rams 1px hairlines) */}
-              <View style={styles.weeklyRhythmContainer}>
-                <View style={styles.weeklyBarsRow}>
-                  {weekDayLabels.map((dayLabel, index) => {
-                    const isToday = index === currentDayIndex;
-                    const dayMinutes = weeklyHistory[index] ?? 0;
-                    // Proportional micro-fill based on authentic weekly history (60m = 36px full bar, 0m = 3px baseline tick)
-                    const barHeight = dayMinutes > 0
-                      ? Math.min(36, Math.max(6, Math.round((dayMinutes / 60) * 36)))
-                      : 3;
+            <ScrollView
+              style={styles.drawerScrollView}
+              contentContainerStyle={[
+                styles.drawerScrollContent,
+                { paddingBottom: insets.bottom + 48 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              bounces={true}
+            >
+              <LineSidebar
+                items={menuItems}
+                activeIndex={activeIndex}
+                onSelect={onSelect}
+                colors={colors}
+              />
 
-                    return (
-                      <View key={dayLabel} style={styles.weekdayCol}>
-                        <View style={styles.barTrack}>
-                          <View
+            {activeIndex === 0 && (
+              <View style={styles.drawerSummary}>
+                <View style={styles.summaryRow}>
+                  <View style={styles.summaryBlock}>
+                    <Text style={[styles.summaryValue, { color: colors.primary }]}>{completedSessions}</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.sessions}</Text>
+                  </View>
+                  <View style={[styles.summaryDivider, { backgroundColor: colors.hairline }]} />
+                  <View style={styles.summaryBlock}>
+                    <Text style={[styles.summaryValue, { color: colors.primary }]}>{totalFocusMinutes}</Text>
+                    <Text style={[styles.summaryLabel, { color: colors.muted }]}>{t.drawer.stats.minutes}</Text>
+                  </View>
+                </View>
+
+                {/* Minimalist 7-Day Weekly Rhythm (Apple / Dieter Rams 1px hairlines) */}
+                <View style={styles.weeklyRhythmContainer}>
+                  <View style={styles.weeklyBarsRow}>
+                    {weekDayLabels.map((dayLabel, index) => {
+                      const isToday = index === currentDayIndex;
+                      const dayMinutes = weeklyHistory[index] ?? 0;
+                      // Proportional micro-fill based on authentic weekly history (60m = 36px full bar, 0m = 3px baseline tick)
+                      const barHeight = dayMinutes > 0
+                        ? Math.min(36, Math.max(6, Math.round((dayMinutes / 60) * 36)))
+                        : 3;
+
+                      return (
+                        <View key={dayLabel} style={styles.weekdayCol}>
+                          <View style={styles.barTrack}>
+                            <View
+                              style={[
+                                styles.barFill,
+                                {
+                                  height: barHeight,
+                                  backgroundColor: isToday
+                                    ? colors.accent
+                                    : (dayMinutes > 0 ? colors.secondary : colors.hairline),
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text
                             style={[
-                              styles.barFill,
+                              styles.weekdayText,
                               {
-                                height: barHeight,
-                                backgroundColor: isToday
-                                  ? colors.accent
-                                  : (dayMinutes > 0 ? colors.secondary : colors.hairline),
+                                color: isToday ? colors.primary : colors.muted,
+                                fontWeight: isToday ? '600' : '400',
                               },
                             ]}
-                          />
+                          >
+                            {dayLabel}
+                          </Text>
                         </View>
-                        <Text
-                          style={[
-                            styles.weekdayText,
-                            {
-                              color: isToday ? colors.primary : colors.muted,
-                              fontWeight: isToday ? '600' : '400',
-                            },
-                          ]}
-                        >
-                          {dayLabel}
-                        </Text>
-                      </View>
-                    );
-                  })}
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
-            </View>
-          )}
 
-          {activeIndex !== 0 && <View style={[styles.drawerRule, { backgroundColor: colors.hairline }]} />}
+                {completedSessions === 0 && (
+                  <View style={[styles.emptyStateBanner, { borderColor: colors.hairline }]}>
+                    <Text style={[styles.emptyStateText, { color: colors.secondary }]}>
+                      {language === 'tr'
+                        ? 'İlk odak seansını tamamlayarak haftalık ritmini başlat.'
+                        : 'Complete your first focus session to build your weekly rhythm.'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {activeIndex !== 0 && <View style={[styles.drawerRule, { backgroundColor: colors.hairline }]} />}
 
           {activeIndex === 1 && (
             <View style={styles.drawerSection}>
@@ -949,6 +996,7 @@ export const FocusDrawer = React.memo(function FocusDrawer({
           </ScrollView>
         </View>
       </Animated.View>
+    </GestureDetector>
     </>
   );
 });
@@ -1260,5 +1308,20 @@ const styles = StyleSheet.create({
   toneCheckmarkPlaceholder: {
     width: 28,
     height: 28,
+  },
+  emptyStateBanner: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontFamily: 'System',
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    fontWeight: '400',
   },
 });

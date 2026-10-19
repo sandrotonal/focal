@@ -11,17 +11,20 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 import { RootErrorBoundary } from './src/components/common/RootErrorBoundary';
 import { TimerDisplay } from './src/components/timer/TimerDisplay';
 import { AppleNotificationBanner } from './src/components/ui/AppleNotificationBanner';
+import { ApplePressable } from './src/components/ui/ApplePressable';
 import { OnboardingScreen } from './src/components/onboarding/OnboardingScreen';
 import { FocusDrawer } from './src/components/FocusDrawer';
 import { COLORS } from './src/theme/colors';
 import { usePreferences } from './src/hooks/usePreferences';
 import { useFocusTimer } from './src/hooks/useFocusTimer';
 import { playFocusStartSound, playTickSound } from './src/audio/soundEngine';
+import { checkAndPromptStoreReview } from './src/services/storeReview';
 import { translations } from './src/i18n/translations';
 import type { DurationUnit } from './src/storage/preferencesStorage';
 
@@ -77,6 +80,14 @@ function FocusEngineScreen() {
 
   const targetDurationSeconds = durationUnit === 'seconds' ? sessionSeconds : sessionMinutes * 60;
 
+  const handleSessionComplete = useCallback(
+    (addedMinutes: number) => {
+      recordCompletedSession(addedMinutes);
+      void checkAndPromptStoreReview(completedSessions + 1);
+    },
+    [completedSessions, recordCompletedSession]
+  );
+
   const {
     elapsed,
     isRunning,
@@ -111,7 +122,7 @@ function FocusEngineScreen() {
     breakNotificationTitle: t.notifications.breakTitle,
     breakNotificationBody: t.notifications.breakBody,
     onPomodoroCycleChange: setPomodoroCycle,
-    onSessionComplete: recordCompletedSession,
+    onSessionComplete: handleSessionComplete,
   });
 
   const isBreak = timerMode === 'shortBreak' || timerMode === 'longBreak';
@@ -250,6 +261,20 @@ function FocusEngineScreen() {
     void playTickSound();
   }, [activeMenuIndex, commitDuration, triggerImpact]);
 
+  const edgePanGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .hitSlop({ left: 0, width: 36 })
+        .activeOffsetX([15, 60])
+        .failOffsetY([-20, 20])
+        .onEnd((event) => {
+          if (event.translationX > 25 && !isDrawerOpen) {
+            runOnJS(openDrawer)();
+          }
+        }),
+    [isDrawerOpen, openDrawer]
+  );
+
   const handleSelectPresetSafe = useCallback((value: number) => {
     if (isRunning || pomodoroEnabled) {
       resetTimer();
@@ -287,7 +312,7 @@ function FocusEngineScreen() {
 
   const handleMenuSelect = useCallback((index: number) => {
     setActiveMenuIndex(index);
-    if (hapticsEnabled) {
+    if (hapticsEnabled && Platform.OS !== 'web') {
       void Haptics.selectionAsync();
     }
     void playTickSound();
@@ -323,6 +348,10 @@ function FocusEngineScreen() {
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
+        <GestureDetector gesture={edgePanGesture}>
+          <View style={styles.edgePanStrip} pointerEvents="box-only" />
+        </GestureDetector>
+
         <View
           style={[
             styles.topBar,
@@ -333,18 +362,18 @@ function FocusEngineScreen() {
           ]}
           pointerEvents={showCompletion ? 'none' : 'auto'}
         >
-          <Pressable
-            accessible
+          <ApplePressable
             accessibilityRole="button"
             accessibilityLabel={t.mainTimer.ariaMenuOpen}
             accessibilityHint={t.mainTimer.ariaHint}
-            hitSlop={10}
+            hitSlop={12}
             onPress={openDrawer}
-            style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
+            activeScale={0.88}
+            style={styles.menuButton}
           >
             <View style={[styles.menuLine, { backgroundColor: colors.primary }]} />
             <View style={[styles.menuLine, styles.menuLineShort, { backgroundColor: colors.primary }]} />
-          </Pressable>
+          </ApplePressable>
           <View pointerEvents="none" style={styles.topMeta}>
             <View style={styles.topMetaBrandRow}>
               <Image
@@ -465,6 +494,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#111215',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  edgePanStrip: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 28,
+    zIndex: 1,
   },
   topBar: {
     position: 'absolute',

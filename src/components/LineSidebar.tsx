@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { ApplePressable } from './ui/ApplePressable';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -50,12 +51,15 @@ export const LineSidebar: React.FC<LineSidebarProps> = React.memo(function LineS
         const isActive = index === activeIndex;
 
         return (
-          <Pressable
+          <ApplePressable
             key={item}
             accessibilityRole="menuitem"
             accessibilityState={{ selected: isActive }}
             onPress={() => onSelect(index)}
-            style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+            activeScale={0.97}
+            activeOpacity={0.85}
+            hapticFeedback="selection"
+            style={styles.item}
           >
             <View style={styles.markerTrack}>
               <View style={[styles.marker, { backgroundColor: colors?.muted ?? '#4B4D57' }]} />
@@ -66,7 +70,7 @@ export const LineSidebar: React.FC<LineSidebarProps> = React.memo(function LineS
             <Text style={[styles.label, { color: colors?.secondary ?? '#B5B6BF' }, isActive && { color: colors?.primary ?? '#F5F5F7' }]}>
               {item}
             </Text>
-          </Pressable>
+          </ApplePressable>
         );
       })}
     </View>

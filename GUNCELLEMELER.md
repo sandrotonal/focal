@@ -177,7 +177,72 @@ Bu doküman, FOCAL mobil uygulamasında gerçekleştirilen tüm mimari, mantıks
 
 ### 8.7 README ve Ekran Görüntüleri Revizyonu
 - Playwright otomasyonu ile çalışan uygulamadan güncel ekran görüntüleri yakalandı (`390x844` piksel):
-  - `04_main_timer.png`: Sade, logo başlıklı ana sayaç ekranı.
+  - `01_onboarding_core.png`: 3D güneş saati ve rafine karşılama slaytı.
+  - `02_onboarding_rhythm.png`: Bildirim izni rehberliği ve gyro sanat eseri.
+  - `03_onboarding_sensory.png`: ModernSwitch toggle listesi ve kişisel odak planı.
+  - `04_main_timer.png`: Canlı çalışan sayaç (`15:59`), ilerleme yayı ve dairesel sıfırlama butonu.
   - `05_drawer_menu.png`: Apple Settings Clean List düzeni ve haftalık gerçek telemetri grafiği.
   - `06_notification_banner.png`: Arkasındaki beyaz kutu kaldırılmış, şeffaf saf Focal logolu Apple Notification Banner.
 - `README.md` içerisindeki mimari ilkeler ve proje dosya ağacı güncel duruma uyarlandı.
+
+---
+
+## 9. Apple UI/UX Felsefesi, Jest Fiziği ve Mobil Mükemmellik Revizyonu
+
+### 9.1 Dokunmatik Yay Fiziği (`ApplePressable`)
+- **Mimari:** Standart kaba opaklık kırpılması yerine, Apple HIG donanım tepkisi standardına geçildi.
+- **Yay Dinamiği:** `withSpring` (sertlik: 420, sönümleme: 18, kütle: 0.5) ile dokunulduğunda hafifçe içe çöken (`scale: 0.96`), bırakıldığında anında yaylanan ve Taptic Engine (`Light/Selection`) vuruşu üreten `src/components/ui/ApplePressable.tsx` bileşeni inşa edildi.
+- **Uygulama:** Ana ekran hamburger menü butonu, çekmece kapatma butonu ve `LineSidebar` sekmeleri bu dokunsal deneyime kavuşturuldu.
+
+### 9.2 Çekmece Jest Mimarisi (Pan & Edge Swipe Gesture)
+- **Çekmece Kapatma:** `FocusDrawer.tsx` bileşeni `GestureDetector` ve `Gesture.Pan()` ile donatıldı. Kullanıcı çekmeceyi sola doğru sürüklediğinde parmağını gerçek zamanlı takip eder; fırlatma hızı (`velocityX < -400`) veya %25 eşiği aşıldığında akıcı bir yaylanma ile kapanır. Dikey kaydırmalar (`failOffsetY`) kesinlikle engellenmez.
+- **Kenardan Çekerek Açma (Edge Swipe):** Ana ekranda sol kenarın ilk 36 pikselinden (`hitSlop: { left: 0, width: 36 }`) sağa kaydırma yapıldığında çekmece native iOS menüleri gibi doğrudan parmak hareketiyle açılır.
+
+### 9.3 Haftalık Ritim & Minimalist Boş Durum (Empty State)
+- `FocusDrawer.tsx` içindeki `01 Odak` sekmesinde henüz hiç seans tamamlanmamışken steril ve ölü bir grafik yerine; Dieter Rams estetiğinde 1px kenarlıklı, zarif rehberlik kartı (`emptyStateBanner`) eklendi:
+  > *"İlk odak seansını tamamlayarak haftalık ritmini başlat."*
+- Bugünün sütununa aktif odak rengiyle belirteç yerleştirilerek haftalık döngü motivasyonu artırıldı.
+
+### 9.4 Apple Native Store Review Entegrasyonu
+- `expo-store-review` paketi projeye dahil edildi.
+- `src/services/storeReview.ts`: Apple App Store kurallarına tam uyumlu olarak, kullanıcı 3. başarılı odak seansını tamamladığında (`checkAndPromptStoreReview`) rahatsız etmeyen native değerlendirme penceresi tetiklenir.
+- Web ortamında veya daha önce sorulmuşsa (`focal.store_review_requested`) sessizce atlanır, uygulama akışı asla kesintiye uğramaz.
+- `__tests__/storeReview.test.ts` ile tüm platform ve kilometre taşı senaryoları birim testleriyle güvenceye alındı.
+
+### 9.5 Kalite Kapıları ve Test Durumu
+- **TypeScript:** 0 hata (`npx tsc --noEmit`)
+- **ESLint:** 0 hata, 0 uyarı (`npx expo lint`)
+- **Jest:** 6 suite, 44/44 yeşil birim testi (`npm test`)
+- **Expo Doctor:** 18/18 kusursuz sağlık skoru (`npx expo-doctor`)
+
+---
+
+## 10. Sayaç Konumu Düzeltmesi, Akustik Mühendisliği ve Mobil Donanım Paritesi
+
+### 10.1 Sayaç Konumunun Optik Merkeze Geri Alınması (Timer Centering Fix)
+- **Sorun:** Sol kenar çekmece jesti (`edgePanGesture`) eklenirken sayaç ve üst bar bir `View style={StyleSheet.absoluteFill}` kapsayıcısı içine alınmıştı. `StyleSheet.absoluteFill` varsayılan olarak `flex-start` hizalamasına sahip olduğu için `TimerDisplay` ekranın en tepesine fırlamış, üst bar ve logo ile çakışmıştı.
+- **Çözüm:** `edgePanGesture` ekranı saran kapsayıcıdan ayrıldı; sol kenarda sadece 28px genişliğinde görünmez bir şerit (`edgePanStrip`) olarak konumlandırıldı (`left: 0, top: 0, bottom: 0, width: 28, zIndex: 1`). `TimerDisplay` doğrudan `styles.screen` (`alignItems: 'center', justifyContent: 'center'`) altına geri getirildi. Böylece sayaç hem dikey hem yatay eksende tam optik merkeze oturtuldu, dokunma çakışmaları sıfırlandı.
+
+### 10.2 PC (Web) vs Android Native Ses Farkının Kök Nedeni ve Çözümü
+- **Neden PC Web'de Ses Mükemmeldi?**
+  - Web üzerinde `Platform.OS === 'web'` kontrolü ile tarayıcının yerel **Web Audio API**'si (`AudioContext`) devreye girer.
+  - Web Audio motorunda matematiksel saf sinüs osilatörleri 32-bit kayan nokta (float) hassasiyetinde doğrudan ses kartına render edilir; zengin akorlar, alt harmonikler ve üst parıltılar kusursuz dijital berraklıkla üretilir.
+- **Neden Android'de Ses Az ve Kalitesiz Geliyordu?**
+  1. **Ham Ses Dosyası Dinamik Aralığı:** `assets/sounds/` içindeki WAV dosyaları aşırı düşük tepe değerine sahipti:
+     - `tick.wav`: Tepe genliği sadece 0.106 (-19.5 dBFS), RMS değeri 0.007 (-43.3 dBFS) seviyesindeydi! Fısıltı düzeyinde olan bu ses, telefon hoparlöründe kayboluyordu.
+     - `focus_start.wav`: Tepe -12.3 dBFS, RMS -26.4 dBFS.
+     - `reset.wav`: Tepe -17.5 dBFS, RMS -33.4 dBFS.
+  2. **Yazılımsal Kısma:** `soundEngine.ts` içinde `player.volume = 0.85` ile zaten zayıf olan ses %15 daha kısılıyordu.
+  3. **Android MediaPlayer Gecikmesi (Seek Latency):** Hızlı tık seslerinde `player.seekTo(0)` çağrısı Android'in ses katmanında ilk 30-50 milisaniyelik kritik atak (attack) tranzientini kırpıyor, ses boğuk veya çatlak çıkıyordu.
+  4. **Android Mikrofon/Hoparlör Donanım Eğrisi:** Telefon hoparlörleri 300Hz altını veremez ve düşük enerjili sesleri fısıltı gibi çalar.
+- **Uygulanan Çözüm:**
+  - `generate_sounds.js` motoru ile tüm ses dosyaları Web Audio API'deki saf harmonik matematik formülleriyle yeniden sentezlendi.
+  - Tüm sesler mobil hoparlörler için **-0.5 dBFS (0.945)** tepe genliğine ve yüksek RMS enerjisine normalleştirildi (`tick.wav` için +23.7 dB enerji artışı).
+  - `TICK_POOL_SIZE` 4 oyuncuya çıkarıldı, oyuncu ses seviyeleri `1.0` (tam kazanç) yapıldı ve seek gecikmesi kırpılmalarının önüne geçildi.
+
+### 10.3 Localde (PC/Web) İyiyken Canlıda (Android/iOS) Kötü Hissettiren Tipik Mobil Tuzakları
+1. **Dinamik Aralık ve Hoparlör Boyutu:** PC hoparlörleri veya kulaklıklar geniş dinamik aralığı (-40dB) rahatça verirken, telefon hoparlörleri için seslerin -0.5 dBFS seviyesine normalleştirilmesi ve 1.5kHz-4kHz aralığında netlik kazanması şarttır.
+2. **Ses Akışı ve Odak (Audio Focus):** Android'de `STREAM_MUSIC` ses seviyesi kısıkken veya sistem karıştırıcısı araya girdiğinde ses kaybolabilir.
+3. **Dokunmatik Gecikme (Touch Slop vs Mouse Click):** PC faresi anında `0ms` ile tıklar; mobilde ise jest motorunun (RNGH) kaydırma ile dokunmayı ayırt etmesi için `hitSlop` ve `minDistance` ayarlarının milimetrik yapılması gerekir.
+4. **Ekran Parlaklığı ve OLED Kontrastı:** PC IPS monitörlerde koyu griler belirgin görünürken, güneş altındaki OLED ekranlarda düşük kontrastlı yazılar (`#333`, `#444`) tamamen görünmez olur. Dieter Rams ilkelerine uygun yüksek kontrastlı yüzey hiyerarşisi zorunludur.
+5. **Erişilebilirlik Font Ölçekleme (Dynamic Type):** Mobilde kullanıcı sistem yazı boyutunu büyüttüğünde sabit yükseklikli kutular çökebilir veya taşabilir. Tüm metin alanları esnek olmalıdır.
