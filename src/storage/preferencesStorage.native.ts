@@ -4,7 +4,9 @@ export type ThemeMode = 'dark' | 'light';
 export type Language = 'tr' | 'en';
 export type DurationUnit = 'minutes' | 'seconds';
 export type SoundAlertTone = 'crystal' | 'aurora' | 'clarity' | 'tibetan' | 'mechanical';
+export type AmbientSoundType = 'none' | 'brown' | 'rain' | 'storm' | 'ocean';
 export type PomodoroStage = 'focus' | 'shortBreak' | 'longBreak';
+
 
 export type FocusPreferences = {
   sessionMinutes: number;
@@ -24,6 +26,8 @@ export type FocusPreferences = {
   pomodoroShortBreakMinutes: number;
   pomodoroLongBreakMinutes: number;
   soundAlertTone: SoundAlertTone;
+  ambientSound: AmbientSoundType;
+  flipToFocus: boolean;
   weeklyHistory: number[];
   weeklyHistoryStartDate?: string;
 };
@@ -49,6 +53,8 @@ const defaults: FocusPreferences = {
   pomodoroShortBreakMinutes: 5,
   pomodoroLongBreakMinutes: 15,
   soundAlertTone: 'crystal',
+  ambientSound: 'none',
+  flipToFocus: false,
   weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
 };
 
@@ -112,6 +118,15 @@ function parseAndValidatePreferences(serialized: string | null | undefined): Foc
         parsed.soundAlertTone === 'mechanical'
           ? parsed.soundAlertTone
           : defaults.soundAlertTone,
+      ambientSound:
+        parsed.ambientSound === 'brown' ||
+        parsed.ambientSound === 'rain' ||
+        parsed.ambientSound === 'storm' ||
+        parsed.ambientSound === 'ocean'
+          ? parsed.ambientSound
+          : 'none',
+
+      flipToFocus: parsed.flipToFocus === true,
       weeklyHistory:
         Array.isArray(parsed.weeklyHistory) && parsed.weeklyHistory.length === 7
           ? parsed.weeklyHistory.map((val) =>

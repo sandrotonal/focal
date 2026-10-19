@@ -43,6 +43,8 @@ export interface TranslationSchema {
       notificationsSubtitle: string;
       hapticsTitle: string;
       hapticsSubtitle: string;
+      flipToFocusTitle: string;
+      flipToFocusSubtitle: string;
       soundTitle: string;
       soundSubtitle: string;
       pomodoroTitle: string;
@@ -63,6 +65,23 @@ export interface TranslationSchema {
         tibetan: string;
         mechanical: string;
       };
+      ambientSoundTitle: string;
+      ambientSoundSubtitle: string;
+      ambientSounds: {
+        none: string;
+        brown: string;
+        rain: string;
+        storm: string;
+        ocean: string;
+      };
+      ambientSoundSubtitles: {
+        none: string;
+        brown: string;
+        rain: string;
+        storm: string;
+        ocean: string;
+      };
+
       pomodoroPlan: {
         title: string;
         focusLabel: string;
@@ -87,6 +106,7 @@ export interface TranslationSchema {
       themeSwitch: string;
       notificationsSwitch: string;
       hapticsSwitch: string;
+      flipToFocusSwitch: string;
       soundSwitch: string;
       pomodoroSwitch: string;
       soundToneSelect: string;
@@ -221,26 +241,45 @@ export const translations: Record<Language, TranslationSchema> = {
         notificationsSubtitle: 'Seans tamamlandığında sistem uyarısı',
         hapticsTitle: 'Haptik Titreşim',
         hapticsSubtitle: 'Dokunsal fiziksel geri bildirim',
+        flipToFocusTitle: 'Ters Çevir ve Başlat',
+        flipToFocusSubtitle: 'Yüzüstü algılandığında sayacı başlatır',
         soundTitle: 'Akustik Efektler',
-        soundSubtitle: '528Hz & 432Hz odak ve mekanik tonlar',
+        soundSubtitle: 'Sistem ve odak tonları',
         pomodoroTitle: 'Pomodoro Ritmi',
         pomodoroSubtitle: '25 dk odak · 5 dk mola · 4 döngü',
         soundAlertTone: 'Bitiş Tonu',
         soundAlertToneSubtitle: 'Rezonans karakteri',
         soundTones: {
-          crystal: 'Kristal Çan',
-          aurora: 'Kutup Işığı',
-          clarity: 'Marimba',
-          tibetan: 'Zen Çanı',
-          mechanical: 'Mekanik Tık',
+          crystal: 'Kristal',
+          aurora: 'Aurora',
+          clarity: 'Berrak',
+          tibetan: 'Zen',
+          mechanical: 'Mekanik',
         },
         soundToneSubtitles: {
-          crystal: '3 yükselen kristal tınısı',
-          aurora: 'Huzurlu eterik armoni',
-          clarity: 'Sıcak ahşap akoru',
-          tibetan: '528Hz meditasyon kasesi',
-          mechanical: 'Hassas kronometre darbesi',
+          crystal: 'Kristal tınısı',
+          aurora: 'Eterik armoni',
+          clarity: 'Ahşap akoru',
+          tibetan: 'Meditasyon kasesi',
+          mechanical: 'Mekanik darbe',
         },
+        ambientSoundTitle: 'Odak Ambiyansı',
+        ambientSoundSubtitle: 'Arka plan sesi',
+        ambientSounds: {
+          none: 'Kapalı',
+          brown: 'Kahverengi Gürültü',
+          rain: 'Yağmur',
+          storm: 'Fırtına',
+          ocean: 'Okyanus',
+        },
+        ambientSoundSubtitles: {
+          none: 'Sessiz',
+          brown: 'Derin frekans',
+          rain: 'Doğal yağmur dokusu',
+          storm: 'Gök gürültüsü ve sağanak',
+          ocean: 'Dalgalar ve kıyı esintisi',
+        },
+
         pomodoroPlan: {
           title: 'RİTİM PLANI',
           focusLabel: 'ODAK',
@@ -266,6 +305,7 @@ export const translations: Record<Language, TranslationSchema> = {
         themeSwitch: 'Karanlık tema anahtarı',
         notificationsSwitch: 'Bitiş bildirimi anahtarı',
         hapticsSwitch: 'Haptik titreşim anahtarı',
+        flipToFocusSwitch: 'Ters çevir ve odaklan anahtarı',
         soundSwitch: 'Akustik ses efektleri anahtarı',
         pomodoroSwitch: 'Pomodoro ritmi anahtarı',
         soundToneSelect: 'Uyarı tonu seçimi',
@@ -398,26 +438,45 @@ export const translations: Record<Language, TranslationSchema> = {
         notificationsSubtitle: 'System alert when session ends',
         hapticsTitle: 'Haptic Feedback',
         hapticsSubtitle: 'Tactile physical feedback',
+        flipToFocusTitle: 'Flip to Start',
+        flipToFocusSubtitle: 'Starts timer when placed face down',
         soundTitle: 'Acoustic Effects',
-        soundSubtitle: '528Hz & 432Hz focus and mechanical tones',
+        soundSubtitle: 'System and focus tones',
         pomodoroTitle: 'Pomodoro Rhythm',
         pomodoroSubtitle: '25m focus · 5m break · 4 cycles',
         soundAlertTone: 'Alert Tone',
         soundAlertToneSubtitle: 'Resonance character',
         soundTones: {
-          crystal: 'Crystal Chime',
-          aurora: 'Aurora Chime',
-          clarity: 'Marimba',
-          tibetan: 'Zen Gong',
-          mechanical: 'Mechanical Click',
+          crystal: 'Crystal',
+          aurora: 'Aurora',
+          clarity: 'Clarity',
+          tibetan: 'Zen',
+          mechanical: 'Mechanical',
         },
         soundToneSubtitles: {
-          crystal: '3 ascending crystal glass notes',
-          aurora: 'Tranquil ethereal harmony',
-          clarity: 'Warm rosewood triad',
-          tibetan: '528Hz meditation bowl',
-          mechanical: 'Precision chronometer impulse',
+          crystal: 'Crystal chime',
+          aurora: 'Ethereal harmony',
+          clarity: 'Rosewood triad',
+          tibetan: 'Meditation bowl',
+          mechanical: 'Chronometer impulse',
         },
+        ambientSoundTitle: 'Focus Soundscape',
+        ambientSoundSubtitle: 'Background sound',
+        ambientSounds: {
+          none: 'Off',
+          brown: 'Brown Noise',
+          rain: 'Rain',
+          storm: 'Storm',
+          ocean: 'Ocean',
+        },
+        ambientSoundSubtitles: {
+          none: 'Silence',
+          brown: 'Deep frequency',
+          rain: 'Natural rainfall texture',
+          storm: 'Thunder & downpour',
+          ocean: 'Waves & distant birds',
+        },
+
         pomodoroPlan: {
           title: 'RHYTHM PLAN',
           focusLabel: 'FOCUS',
@@ -443,6 +502,7 @@ export const translations: Record<Language, TranslationSchema> = {
         themeSwitch: 'Dark theme toggle',
         notificationsSwitch: 'Completion notification toggle',
         hapticsSwitch: 'Haptic feedback toggle',
+        flipToFocusSwitch: 'Flip to focus toggle',
         soundSwitch: 'Acoustic effects toggle',
         pomodoroSwitch: 'Pomodoro rhythm toggle',
         soundToneSelect: 'Alert tone selector',

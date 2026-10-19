@@ -23,10 +23,12 @@ import { FocusDrawer } from './src/components/FocusDrawer';
 import { COLORS } from './src/theme/colors';
 import { usePreferences } from './src/hooks/usePreferences';
 import { useFocusTimer } from './src/hooks/useFocusTimer';
+import { useFlipToFocus } from './src/hooks/useFlipToFocus';
 import { playFocusStartSound, playTickSound } from './src/audio/soundEngine';
 import { checkAndPromptStoreReview } from './src/services/storeReview';
+import { recordMindfulMinutes } from './src/services/healthKitService';
 import { translations } from './src/i18n/translations';
-import type { DurationUnit } from './src/storage/preferencesStorage';
+import type { AmbientSoundType, DurationUnit } from './src/storage/preferencesStorage';
 
 function FocusEngineScreen() {
   const { width, height } = useWindowDimensions();
@@ -54,6 +56,8 @@ function FocusEngineScreen() {
     pomodoroShortBreakMinutes,
     pomodoroLongBreakMinutes,
     soundAlertTone,
+    ambientSound,
+    flipToFocus,
     weeklyHistory,
     handleChangeDurationUnit,
     handleThemeChange,
@@ -63,6 +67,8 @@ function FocusEngineScreen() {
     handleNotificationsToggle,
     handleTogglePomodoro,
     handleSelectSoundTone,
+    handleSelectAmbientSound,
+    handleToggleFlipToFocus,
     setPomodoroCycle,
     setPomodoroFocusMinutes,
     setPomodoroShortBreakMinutes,
@@ -84,6 +90,11 @@ function FocusEngineScreen() {
     (addedMinutes: number) => {
       recordCompletedSession(addedMinutes);
       void checkAndPromptStoreReview(completedSessions + 1);
+      void recordMindfulMinutes({
+        startDate: new Date(Date.now() - addedMinutes * 60 * 1000),
+        endDate: new Date(),
+        minutes: addedMinutes,
+      });
     },
     [completedSessions, recordCompletedSession]
   );
@@ -112,6 +123,7 @@ function FocusEngineScreen() {
     notificationsEnabled,
     hapticsEnabled,
     soundAlertTone,
+    ambientSound,
     pomodoroEnabled,
     pomodoroCycle,
     pomodoroFocusMinutes,
@@ -123,6 +135,16 @@ function FocusEngineScreen() {
     breakNotificationBody: t.notifications.breakBody,
     onPomodoroCycleChange: setPomodoroCycle,
     onSessionComplete: handleSessionComplete,
+  });
+
+  useFlipToFocus({
+    enabled: flipToFocus,
+    isRunning,
+    onTriggerStart: () => {
+      if (!isRunning) {
+        toggleTimer();
+      }
+    },
   });
 
   const isBreak = timerMode === 'shortBreak' || timerMode === 'longBreak';
@@ -326,6 +348,13 @@ function FocusEngineScreen() {
     });
   }, [handleNotificationsToggle, isRunning, scheduleCompletion]);
 
+  const handleSelectAmbientSoundWithState = useCallback(
+    (ambient: AmbientSoundType) => {
+      handleSelectAmbientSound(ambient, isRunning);
+    },
+    [handleSelectAmbientSound, isRunning]
+  );
+
   if (!isPreferencesLoaded) {
     return <View style={[styles.screen, { backgroundColor: colors.background }]} />;
   }
@@ -467,8 +496,12 @@ function FocusEngineScreen() {
           onTogglePomodoro={handleTogglePomodoroSafe}
           onSelectPomodoroPreset={handleSelectPomodoroPresetSafe}
           onSelectShortBreak={setPomodoroShortBreakMinutes}
+          ambientSound={ambientSound}
+          flipToFocus={flipToFocus}
           onSelectLongBreak={setPomodoroLongBreakMinutes}
           onSelectSoundTone={handleSelectSoundTone}
+          onSelectAmbientSound={handleSelectAmbientSoundWithState}
+          onToggleFlipToFocus={handleToggleFlipToFocus}
         />
       </View>
     </GestureHandlerRootView>

@@ -64,6 +64,8 @@ describe('preferencesStorage (web)', () => {
       pomodoroShortBreakMinutes: 5,
       pomodoroLongBreakMinutes: 15,
       soundAlertTone: 'tibetan',
+      ambientSound: 'brown',
+      flipToFocus: true,
       weeklyHistory: [0, 0, 0, 0, 0, 0, 0],
     };
 
@@ -72,6 +74,41 @@ describe('preferencesStorage (web)', () => {
 
     expect(loaded).toEqual(updated);
   });
+
+  it('validates flipToFocus and defaults to false', () => {
+    mockStorage['focal.preferences'] = JSON.stringify({
+      flipToFocus: true,
+    });
+    expect(loadPreferences().flipToFocus).toBe(true);
+
+    mockStorage['focal.preferences'] = JSON.stringify({
+      flipToFocus: 'invalid',
+    });
+    expect(loadPreferences().flipToFocus).toBe(false);
+  });
+
+  it('validates ambientSound and falls back to none for invalid strings', () => {
+    mockStorage['focal.preferences'] = JSON.stringify({
+      ambientSound: 'rain',
+    });
+    expect(loadPreferences().ambientSound).toBe('rain');
+
+    mockStorage['focal.preferences'] = JSON.stringify({
+      ambientSound: 'storm',
+    });
+    expect(loadPreferences().ambientSound).toBe('storm');
+
+    mockStorage['focal.preferences'] = JSON.stringify({
+      ambientSound: 'ocean',
+    });
+    expect(loadPreferences().ambientSound).toBe('ocean');
+
+    mockStorage['focal.preferences'] = JSON.stringify({
+      ambientSound: 'invalid_noise',
+    });
+    expect(loadPreferences().ambientSound).toBe('none');
+  });
+
 
   it('clamps sessionSeconds between 5 and 3600', () => {
     mockStorage['focal.preferences'] = JSON.stringify({

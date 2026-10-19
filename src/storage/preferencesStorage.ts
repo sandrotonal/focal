@@ -8,6 +8,7 @@ export type {
   DurationUnit,
   FocusPreferences,
   SoundAlertTone,
+  AmbientSoundType,
   PomodoroStage,
 } from './preferencesStorage.web';
 

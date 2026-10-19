@@ -24,7 +24,7 @@ import { ModernSwitch } from './ui/ModernSwitch';
 import { RhythmOptionWheel, type RhythmPreset } from './ui/RhythmOptionWheel';
 import Svg, { Path } from 'react-native-svg';
 import { translations, Language } from '../i18n/translations';
-import type { DurationUnit, SoundAlertTone, ThemeMode } from '../storage/preferencesStorage';
+import type { AmbientSoundType, DurationUnit, SoundAlertTone, ThemeMode } from '../storage/preferencesStorage';
 import type { AppColors } from '../theme/colors';
 
 const SESSION_OPTIONS_MINUTES = [15, 25, 45, 60];
@@ -54,6 +54,8 @@ export type FocusDrawerProps = {
   pomodoroShortBreakMinutes?: number;
   pomodoroLongBreakMinutes?: number;
   soundAlertTone: SoundAlertTone;
+  ambientSound?: AmbientSoundType;
+  flipToFocus?: boolean;
   completedSessions: number;
   totalFocusMinutes: number;
   weeklyHistory?: number[];
@@ -74,6 +76,8 @@ export type FocusDrawerProps = {
   onSelectShortBreak?: (mins: number) => void;
   onSelectLongBreak?: (mins: number) => void;
   onSelectSoundTone: (tone: SoundAlertTone) => void;
+  onSelectAmbientSound?: (sound: AmbientSoundType) => void;
+  onToggleFlipToFocus?: () => void;
 };
 
 export const FocusDrawer = React.memo(function FocusDrawer({
@@ -94,6 +98,8 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   pomodoroShortBreakMinutes = 5,
   pomodoroLongBreakMinutes = 15,
   soundAlertTone,
+  ambientSound = 'none',
+  flipToFocus = false,
   colors,
   onClose,
   onSelect,
@@ -111,6 +117,8 @@ export const FocusDrawer = React.memo(function FocusDrawer({
   onSelectShortBreak,
   onSelectLongBreak,
   onSelectSoundTone,
+  onSelectAmbientSound,
+  onToggleFlipToFocus,
   completedSessions,
   totalFocusMinutes,
   weeklyHistory = [0, 0, 0, 0, 0, 0, 0],
@@ -773,9 +781,6 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                   <Text style={[styles.settingValue, { color: colors.primary }]}>
                     {theme === 'dark' ? t.drawer.sections.darkMode : t.drawer.sections.lightMode}
                   </Text>
-                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
-                    {theme === 'dark' ? t.drawer.sections.darkSubtitle : t.drawer.sections.lightSubtitle}
-                  </Text>
                 </View>
                 <View pointerEvents="none">
                   <ModernSwitch
@@ -808,7 +813,6 @@ export const FocusDrawer = React.memo(function FocusDrawer({
               >
                 <View style={styles.settingTextGroup}>
                   <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.notificationsTitle}</Text>
-                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.notificationsSubtitle}</Text>
                 </View>
                 <View pointerEvents="none">
                   <ModernSwitch
@@ -841,7 +845,6 @@ export const FocusDrawer = React.memo(function FocusDrawer({
               >
                 <View style={styles.settingTextGroup}>
                   <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.hapticsTitle}</Text>
-                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.hapticsSubtitle}</Text>
                 </View>
                 <View pointerEvents="none">
                   <ModernSwitch
@@ -852,6 +855,35 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                     crossColor={colors.muted}
                     checkmarkColor="#FFFFFF"
                     accessibilityLabel={t.drawer.aria.hapticsSwitch}
+                  />
+                </View>
+              </Pressable>
+
+              <Pressable
+                accessible
+                accessibilityRole="switch"
+                accessibilityState={{ checked: flipToFocus }}
+                accessibilityLabel={t.drawer.aria.flipToFocusSwitch}
+                onPress={onToggleFlipToFocus}
+                style={({ pressed }) => [
+                  styles.settingRow,
+                  { borderBottomColor: colors.hairline, marginTop: 12 },
+                  pressed && styles.itemPressed,
+                ]}
+              >
+                <View style={styles.settingTextGroup}>
+                  <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.flipToFocusTitle}</Text>
+                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.flipToFocusSubtitle}</Text>
+                </View>
+                <View pointerEvents="none">
+                  <ModernSwitch
+                    value={flipToFocus}
+                    onValueChange={() => {}}
+                    checkedBg={colors.accent}
+                    uncheckedBg={colors.hairline}
+                    crossColor={colors.muted}
+                    checkmarkColor="#FFFFFF"
+                    accessibilityLabel={t.drawer.aria.flipToFocusSwitch}
                   />
                 </View>
               </Pressable>
@@ -874,7 +906,6 @@ export const FocusDrawer = React.memo(function FocusDrawer({
               >
                 <View style={styles.settingTextGroup}>
                   <Text style={[styles.settingValue, { color: colors.primary }]}>{t.drawer.sections.soundTitle}</Text>
-                  <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{t.drawer.sections.soundSubtitle}</Text>
                 </View>
                 <View pointerEvents="none">
                   <ModernSwitch
@@ -896,15 +927,11 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                     <Text style={[styles.toneSectionHeader, { color: colors.muted }]}>
                       {t.drawer.sections.soundAlertTone.toUpperCase()}
                     </Text>
-                    <Text style={[styles.toneSectionSubheader, { color: colors.muted }]}>
-                      {t.drawer.sections.soundAlertToneSubtitle}
-                    </Text>
                   </View>
 
                   {(['crystal', 'aurora', 'clarity', 'tibetan', 'mechanical'] as const).map((toneKey) => {
                     const isSelected = soundAlertTone === toneKey;
                     const label = t.drawer.sections.soundTones[toneKey];
-                    const subtitle = t.drawer.sections.soundToneSubtitles[toneKey];
                     return (
                       <Pressable
                         key={toneKey}
@@ -917,22 +944,75 @@ export const FocusDrawer = React.memo(function FocusDrawer({
                           pressed && styles.itemPressed,
                         ]}
                       >
-                        <View style={styles.settingTextGroup}>
-                          <Text
-                            style={[
-                              styles.settingValue,
-                              {
-                                color: isSelected ? colors.primary : colors.secondary,
-                                fontWeight: isSelected ? '600' : '400',
-                              },
-                            ]}
-                          >
-                            {label}
-                          </Text>
-                          <Text style={[styles.settingSubtitle, { color: colors.muted }]}>
-                            {subtitle}
-                          </Text>
-                        </View>
+                        <Text
+                          style={[
+                            styles.settingValue,
+                            {
+                              color: isSelected ? colors.primary : colors.secondary,
+                              fontWeight: isSelected ? '600' : '400',
+                            },
+                          ]}
+                        >
+                          {label}
+                        </Text>
+
+                        {isSelected ? (
+                          <View style={styles.toneCheckmarkWrapper}>
+                            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                              <Path
+                                d="M5 13l4 4L19 7"
+                                stroke={colors.accent}
+                                strokeWidth={2.4}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </Svg>
+                          </View>
+                        ) : (
+                          <View style={styles.toneCheckmarkPlaceholder} />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Ambient Soundscapes Selector (Apple iOS Background Sounds style) */}
+              {soundEnabled && (
+                <View style={[styles.toneSectionContainer, { marginTop: 24 }]}>
+                  <View style={styles.toneSectionHeaderRow}>
+                    <Text style={[styles.toneSectionHeader, { color: colors.muted }]}>
+                      {t.drawer.sections.ambientSoundTitle.toUpperCase()}
+                    </Text>
+                  </View>
+
+                  {(['none', 'brown', 'rain', 'storm', 'ocean'] as const).map((soundKey) => {
+                    const isSelected = ambientSound === soundKey;
+                    const label = t.drawer.sections.ambientSounds[soundKey];
+
+                    return (
+                      <Pressable
+                        key={soundKey}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${label} ${t.drawer.aria.soundToneSelect}`}
+                        onPress={() => onSelectAmbientSound?.(soundKey)}
+                        style={({ pressed }) => [
+                          styles.settingRow,
+                          { borderBottomColor: colors.hairline },
+                          pressed && styles.itemPressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.settingValue,
+                            {
+                              color: isSelected ? colors.primary : colors.secondary,
+                              fontWeight: isSelected ? '600' : '400',
+                            },
+                          ]}
+                        >
+                          {label}
+                        </Text>
 
                         {isSelected ? (
                           <View style={styles.toneCheckmarkWrapper}>
