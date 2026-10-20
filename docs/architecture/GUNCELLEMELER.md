@@ -246,3 +246,34 @@ Bu doküman, FOCAL mobil uygulamasında gerçekleştirilen tüm mimari, mantıks
 3. **Dokunmatik Gecikme (Touch Slop vs Mouse Click):** PC faresi anında `0ms` ile tıklar; mobilde ise jest motorunun (RNGH) kaydırma ile dokunmayı ayırt etmesi için `hitSlop` ve `minDistance` ayarlarının milimetrik yapılması gerekir.
 4. **Ekran Parlaklığı ve OLED Kontrastı:** PC IPS monitörlerde koyu griler belirgin görünürken, güneş altındaki OLED ekranlarda düşük kontrastlı yazılar (`#333`, `#444`) tamamen görünmez olur. Dieter Rams ilkelerine uygun yüksek kontrastlı yüzey hiyerarşisi zorunludur.
 5. **Erişilebilirlik Font Ölçekleme (Dynamic Type):** Mobilde kullanıcı sistem yazı boyutunu büyüttüğünde sabit yükseklikli kutular çökebilir veya taşabilir. Tüm metin alanları esnek olmalıdır.
+
+---
+
+## 11. Saf Onboarding Deneyimi & Kristal Saydam Akustik Görseller (Pure Onboarding Architecture)
+
+### 11.1 Dieter Rams & Apple Donanım Minimalizmi
+- **Kutu ve Kart Yapılarının Sıfırlanması:** Eski onboarding akışında yer alan yapay kartlar, kalın çerçeveler, hantal kutu gölgeleri ve yapay arka plan panelleri tamamen kaldırıldı.
+- **Doğrudan İçerik Odaklı Tasarım:** Kullanıcıyı boğmayan, her slaytta tek ve net bir değer önerisi sunan sürtünmesiz (frictionless) 3 adımlı saf donanım akışı kurgulandı:
+  1. **01 // Kinetik Odak Çekirdeği (Kinetic Focus Core):** Saf SVG vektör çizimi, nefes alan ince halka auraları, dokunulduğunda yayılan mikro dalga (`ripple`) animasyonu ve haptik titreşim tepkisi ile sıfır kutu estetiği.
+  2. **02 // Akustik Alan (Pure Atmospheric Soundscape):** Zihni saran doğal ses manzaraları; kutusuz tipografik seçici (`SESSİZ`, `Yağmur`, `Fırtına`, `Okyanus`) ve saf saydam nesneler.
+  3. **03 // Ritim & Saf Apple Anahtarları (Cadence & Zero-Box Controls):** `15 dk (Sprint)`, `25 dk (Klasik)`, `45 dk (Derin)` seans süreleri, alt alta hizalanan 1px ince ayırıcı çizgili iOS Ayarlar tarzı `MinimalToggleRow` bildirim ve haptik anahtarları.
+
+### 11.2 Arka Plan Temizliği ve U2Net De-Blacking Pipeline
+- **Sorun:** Yapay zeka ile üretilen ses manzarası görselleri siyah zeminle (`#000000` / koyu camgöbeği duman) geldiği için, basit renk eşikleme yapıldığında nesnelerin etrafında kirli, dikdörtgen bir sis/kutu izi kalıyordu.
+- **Çözüm (`make_transparent_soundscapes.py`):**
+  - **U2Net Sinir Ağı Segmentasyonu:** `rembg` (U2NetP mimarisi) ile ön plan silüeti milimetrik olarak ayrıştırıldı.
+  - **De-Blacking & Un-Premultiplication:** Siyah zemin ile karışmış yarı saydam pikseller matematiksel ters çarpım (`Color / alpha^0.5`) ile aydınlatılarak siyah renk kirliliği tamamen yok edildi; su damlaları, fırtına bulutu, parıldayan okyanus dalgası ve zen halkası saf berrak kristal parlaklığına kavuşturuldu.
+  - **Sıfır Kenar Toleransı:** Kenar piksellerinden itibaren 60 ila 250 piksel boyunca tam şeffaflık (`alpha = 0`) sağlandı. Dikdörtgen sınır, kutu veya arka plan lekesi olasılığı 100% ortadan kaldırıldı.
+
+### 11.3 Canlı 120 FPS Jest Senkronizasyonlu Hap Göstergesi (DynamicPillIndicator)
+- **Sorun:** Sayfa parmakla kaydırılırken alttaki adım noktalarının yalnızca hareket bittiğinde (`onMomentumEnd`) atlaması takılma hissi yaratıyordu.
+- **Çözüm:** `react-native-reanimated` SharedValue (`scrollX`) doğrudan `DynamicPillIndicator` içine bağlandı. UI iş parçacığında (UI thread) 120 FPS hızında parmağın her mikronluk hareketine göre aktif 22px hap ile inaktif 6px daire arasında kesintisiz morfik interpolasyon sağlandı.
+
+### 11.4 Anlık İki Dilli Senkronizasyon (Bilingual Instant Sync)
+- Onboarding sağ üst köşesinde yer alan dil değiştirme butonuna (`TR <-> EN`) dokunulduğunda, seçim yalnızca onboarding durumunda kalmaz; `onLanguageChange` prop'u aracılığıyla kök `App.tsx` ve kalıcı `usePreferences` durumuna anında aktarılır. Kullanıcı onboarding'i hangi dilde tamamlarsa uygulama ana ekranı doğrudan o dilde karşılar.
+
+### 11.5 Doğrulama ve Sağlık Skoru
+- **TypeScript:** `npx tsc --noEmit` -> 0 hata.
+- **Jest Testleri:** `npm test` -> 8 test paketi, 55/55 test başarılı.
+- **Playwright Canlı Tarayıcı Denetimi:** Her 4 ses manzarası ve tüm adımlar canlı render edilerek kutusuz ve kenarlıksız görüntü teyit edildi.
+

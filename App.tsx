@@ -364,6 +364,7 @@ function FocusEngineScreen() {
       <OnboardingScreen
         colors={colors}
         initialLanguage={language}
+        onLanguageChange={handleToggleLanguage}
         onComplete={(p) => {
           completeOnboarding(p);
           void playFocusStartSound();

@@ -15,27 +15,30 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ArtworkSundialDesk,
-  ArtworkAcousticWaves,
-  ArtworkFlowState,
-  PreferencesToggleList,
-  InlineProgressPill,
-  CapsuleCtaButton,
-} from './Artwork3D';
 import { OnboardingSlide3D } from './OnboardingSlide3D';
+import { InteractiveFocusCore } from './InteractiveFocusCore';
+import { AtmosphericSoundscapeVisual } from './AtmosphericSoundscapeVisual';
+import { SoundscapeTextSelector, SoundscapeOption } from './SoundscapeTextSelector';
+import { CadenceSelector, CadenceOption } from './CadenceSelector';
+import { MinimalToggleRow } from './MinimalToggleRow';
+import { DynamicPillIndicator } from './DynamicPillIndicator';
+import { AppleCtaButton } from './AppleCtaButton';
 import type { AppColors, FocusPreferences } from './types';
+import type { AmbientSoundType } from '../../storage/preferencesStorage';
 import { requestNotificationPermission } from '../../notifications/notifications';
 import {
   playFocusStartSound,
   playTickSound,
   preloadNativeSounds,
+  preloadAmbientSounds,
+  stopAmbientSound,
 } from '../../audio/soundEngine';
 import { translations, Language } from '../../i18n/translations';
 
 type Props = {
   colors: AppColors;
   initialLanguage?: Language;
+  onLanguageChange?: (lang: Language) => void;
   onComplete: (preferences: Partial<FocusPreferences>) => void;
 };
 
@@ -44,6 +47,7 @@ const BG_COLOR = '#0A0A0C';
 
 export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingScreen({
   initialLanguage = 'tr',
+  onLanguageChange,
   onComplete,
 }) {
   const { width, height } = useWindowDimensions();
@@ -54,26 +58,27 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
 
   const [language, setLanguage] = useState<Language>(initialLanguage);
   const [step, setStep] = useState(0);
-  const [sessionMinutes] = useState(25);
+  const [sessionMinutes, setSessionMinutes] = useState(25);
+  const [ambientSound, setAmbientSound] = useState<AmbientSoundType>('rain');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled] = useState(true);
 
   // Programmatic navigation lock to avoid duplicate sound/haptics
   const isProgrammaticNav = useRef(false);
   const navTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Eagerly preload native sound decoders on screen mount for zero-latency audio
+  // Eagerly preload native sound decoders & ambient buffers on mount
   useEffect(() => {
     preloadNativeSounds();
+    preloadAmbientSounds();
     return () => {
       if (navTimeout.current) clearTimeout(navTimeout.current);
+      stopAmbientSound();
     };
   }, []);
 
-  // Top 55% visual height calculation
-  const visualHeight = Math.round(height * 0.54);
-
+  const visualHeight = Math.round(height * 0.44);
   const t = translations[language];
 
   const triggerHaptic = useCallback(
@@ -92,13 +97,31 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
   const toggleLanguage = useCallback(() => {
     const nextLang: Language = language === 'tr' ? 'en' : 'tr';
     setLanguage(nextLang);
+    onLanguageChange?.(nextLang);
     triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
     if (soundEnabled) {
       void playTickSound();
     }
-  }, [language, soundEnabled, triggerHaptic]);
+  }, [language, onLanguageChange, soundEnabled, triggerHaptic]);
+
+  const handleToggleNotifications = useCallback(
+    async (next: boolean) => {
+      if (next) {
+        try {
+          const granted = await requestNotificationPermission();
+          setNotificationsEnabled(granted);
+        } catch {
+          setNotificationsEnabled(false);
+        }
+      } else {
+        setNotificationsEnabled(false);
+      }
+    },
+    []
+  );
 
   const finish = useCallback(() => {
+    stopAmbientSound();
     triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
     if (soundEnabled) {
       void playFocusStartSound();
@@ -112,13 +135,22 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
       notificationsEnabled,
       hapticsEnabled,
       soundEnabled,
+      ambientSound,
       onboardingCompleted: true,
       completedSessions: 0,
       totalFocusMinutes: 0,
     });
-  }, [hapticsEnabled, language, notificationsEnabled, onComplete, sessionMinutes, soundEnabled, triggerHaptic]);
+  }, [
+    ambientSound,
+    hapticsEnabled,
+    language,
+    notificationsEnabled,
+    onComplete,
+    sessionMinutes,
+    soundEnabled,
+    triggerHaptic,
+  ]);
 
-  // Handle manual swipe momentum snap (only triggers audio/haptics when user finishes drag)
   const handleMomentumSnap = useCallback(
     (snapIndex: number) => {
       if (isProgrammaticNav.current) return;
@@ -134,10 +166,13 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
     [soundEnabled, triggerHaptic]
   );
 
-  // Pure UI-thread scroll handler for 120 FPS buttery parallax
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollX.value = event.contentOffset.x;
+      const current = Math.round(event.contentOffset.x / width);
+      if (current >= 0 && current < TOTAL_STEPS) {
+        runOnJS(handleMomentumSnap)(current);
+      }
     },
     onMomentumEnd: (event) => {
       const current = Math.round(event.contentOffset.x / width);
@@ -145,7 +180,6 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
     },
   });
 
-  // Programmatic forward step navigation
   const moveToStep = useCallback(
     (nextStep: number) => {
       if (nextStep >= TOTAL_STEPS) {
@@ -174,58 +208,33 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
     [finish, reducedMotion, soundEnabled, triggerHaptic, width]
   );
 
-  const handleRequestNotification = useCallback(async () => {
-    triggerHaptic(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const granted = await requestNotificationPermission();
-      setNotificationsEnabled(granted);
-      if (granted) {
-        triggerHaptic(Haptics.ImpactFeedbackStyle.Heavy);
-        if (soundEnabled) {
-          void playTickSound();
-        }
-      }
-    } catch {
-      setNotificationsEnabled(false);
-    }
-  }, [soundEnabled, triggerHaptic]);
-
-  const handleToggleNotifications = useCallback(async () => {
-    if (!notificationsEnabled) {
-      await handleRequestNotification();
+  const handlePrimaryCtaPress = useCallback(() => {
+    if (step < TOTAL_STEPS - 1) {
+      moveToStep(step + 1);
     } else {
-      setNotificationsEnabled(false);
-      triggerHaptic(Haptics.ImpactFeedbackStyle.Light);
-      if (soundEnabled) {
-        void playTickSound();
-      }
-    }
-  }, [handleRequestNotification, notificationsEnabled, soundEnabled, triggerHaptic]);
-
-  const handlePrimaryCtaPress = useCallback(async () => {
-    if (step === 0) {
-      moveToStep(1);
-    } else if (step === 1) {
-      if (!notificationsEnabled) {
-        await handleRequestNotification();
-      }
-      moveToStep(2);
-    } else if (step === 2) {
       finish();
     }
-  }, [finish, handleRequestNotification, moveToStep, notificationsEnabled, step]);
+  }, [finish, moveToStep, step]);
 
-  // Primary CTA label depending on active step
-  const capsuleCtaLabel =
-    step === 2
-      ? t.onboarding.start
-      : step === 1 && !notificationsEnabled
-      ? t.onboarding.allowNotifications
-      : t.onboarding.continue;
+  const cadenceOptions: CadenceOption[] = [
+    { minutes: 15, label: t.onboarding.slide2.pomodoro.label },
+    { minutes: 25, label: t.onboarding.slide2.deepWork.label },
+    { minutes: 45, label: t.onboarding.slide2.flowState.label },
+  ];
+
+  const soundscapeOptions: SoundscapeOption[] = [
+    { type: 'none', label: t.common.silent },
+    { type: 'rain', label: t.drawer.sections.ambientSounds.rain },
+    { type: 'storm', label: t.drawer.sections.ambientSounds.storm },
+    { type: 'ocean', label: t.drawer.sections.ambientSounds.ocean },
+  ];
+
+  const ctaLabel =
+    step === TOTAL_STEPS - 1 ? t.onboarding.start : t.onboarding.continue;
 
   return (
     <View style={styles.container}>
-      {/* Floating Top Bar (z-index: 20) gently overlaying artwork */}
+      {/* Top Floating Bar */}
       <View style={[styles.floatingHeader, { top: insets.top + 10 }]}>
         <View style={styles.brandRow}>
           <Image
@@ -239,25 +248,31 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
         </View>
 
         <View style={styles.headerRight}>
-          {/* Borderless Text-Only Language Switcher */}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t.drawer.aria.languageSwitch}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={toggleLanguage}
-            style={({ pressed }) => [styles.headerTextBtn, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerTextBtn,
+              pressed && styles.pressed,
+            ]}
           >
-            <Text style={styles.headerTextBtnLabel}>{language.toUpperCase()}</Text>
+            <Text style={styles.headerTextBtnLabel}>
+              {language.toUpperCase()}
+            </Text>
           </Pressable>
 
-          {/* Borderless Text Skip Button with Space Reservation */}
           {step < TOTAL_STEPS - 1 ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t.onboarding.skip}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={finish}
-              style={({ pressed }) => [styles.headerTextBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.headerTextBtn,
+                pressed && styles.pressed,
+              ]}
             >
               <Text style={styles.headerTextBtnLabel}>{t.onboarding.skip}</Text>
             </Pressable>
@@ -267,7 +282,7 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
         </View>
       </View>
 
-      {/* Horizontal Carousel (3 Refined Editorial Screens) */}
+      {/* Slide Carousel */}
       <Animated.ScrollView
         ref={scrollRef}
         horizontal
@@ -277,108 +292,116 @@ export const OnboardingScreen: React.FC<Props> = React.memo(function OnboardingS
         onScroll={scrollHandler}
         style={styles.pager}
       >
-        {/* ================================================================ */}
-        {/* EKRAN 1: KARŞILAMA (SUNDIAL DESK HERO)                           */}
-        {/* ================================================================ */}
+        {/* Slide 1: Kinetic Focus Core */}
         <OnboardingSlide3D
           index={0}
           width={width}
           scrollX={scrollX}
           reducedMotion={Boolean(reducedMotion)}
         >
-          {/* Top 55% Full-Bleed Artwork */}
-          <ArtworkSundialDesk width={width} height={visualHeight} />
-
-          {/* Bottom 45% Editorial Content Area */}
+          <View style={[styles.visualArea, { height: visualHeight }]}>
+            <InteractiveFocusCore
+              width={width}
+              height={visualHeight}
+              hapticsEnabled={hapticsEnabled}
+              soundEnabled={soundEnabled}
+            />
+          </View>
           <View style={styles.bottomContentArea}>
             <Text style={styles.headlineText}>{t.onboarding.slide1.title}</Text>
             <Text style={styles.subtitleText}>{t.onboarding.slide1.body}</Text>
-            <InlineProgressPill currentStep={0} totalSteps={TOTAL_STEPS} />
           </View>
         </OnboardingSlide3D>
 
-        {/* ================================================================ */}
-        {/* EKRAN 2: BİLDİRİM İZNİ (ACOUSTIC WAVES)                          */}
-        {/* ================================================================ */}
+        {/* Slide 2: Dynamic Atmospheric Soundscape (Pure, borderless visuals) */}
         <OnboardingSlide3D
           index={1}
           width={width}
           scrollX={scrollX}
           reducedMotion={Boolean(reducedMotion)}
         >
-          {/* Top 55% Full-Bleed Artwork */}
-          <ArtworkAcousticWaves width={width} height={visualHeight} />
-
-          {/* Bottom 45% Editorial Content Area */}
+          <View style={[styles.visualArea, { height: visualHeight }]}>
+            <AtmosphericSoundscapeVisual
+              ambientSound={ambientSound}
+              width={width}
+              height={visualHeight}
+            />
+          </View>
           <View style={styles.bottomContentArea}>
+            <SoundscapeTextSelector
+              selectedSound={ambientSound}
+              onSelect={setAmbientSound}
+              options={soundscapeOptions}
+              hapticsEnabled={hapticsEnabled}
+              soundEnabled={soundEnabled}
+            />
             <Text style={styles.headlineText}>{t.onboarding.slide3.title}</Text>
             <Text style={styles.subtitleText}>{t.onboarding.slide3.body}</Text>
-            <InlineProgressPill currentStep={1} totalSteps={TOTAL_STEPS} />
           </View>
         </OnboardingSlide3D>
 
-        {/* ================================================================ */}
-        {/* EKRAN 3: TERCİHLER & TOGGLES (FLOW STATE)                       */}
-        {/* ================================================================ */}
+        {/* Slide 3: Cadence & Native Minimalist Toggles */}
         <OnboardingSlide3D
           index={2}
           width={width}
           scrollX={scrollX}
           reducedMotion={Boolean(reducedMotion)}
         >
-          {/* Top 55% Full-Bleed Artwork */}
-          <ArtworkFlowState width={width} height={visualHeight} />
-
-          {/* Bottom 45% Editorial Content Area */}
-          <View style={styles.bottomContentArea}>
-            <Text style={styles.headlineText}>{t.onboarding.slide4.title}</Text>
-            <Text style={styles.subtitleText}>{t.onboarding.slide4.body}</Text>
-
-            {/* Clean Modern Switch Toggle Rows */}
-            <PreferencesToggleList
-              language={language}
-              notificationsEnabled={notificationsEnabled}
+          <View style={[styles.visualAreaCompact, { height: visualHeight - 40 }]}>
+            <CadenceSelector
+              selectedMinutes={sessionMinutes}
+              onSelect={setSessionMinutes}
+              options={cadenceOptions}
+              unitLabel={t.common.minuteShort}
               hapticsEnabled={hapticsEnabled}
               soundEnabled={soundEnabled}
-              onToggleNotifications={handleToggleNotifications}
-              onToggleHaptics={() => setHapticsEnabled((prev) => !prev)}
-              onToggleSound={() => setSoundEnabled((prev) => !prev)}
             />
-
-            <InlineProgressPill currentStep={2} totalSteps={TOTAL_STEPS} />
+          </View>
+          <View style={styles.bottomContentAreaCompact}>
+            {/* Minimal Apple UI/UX Toggle Controls - Zero Card Box */}
+            <View style={styles.togglesWrapper}>
+              <MinimalToggleRow
+                title={t.drawer.sections.notificationsTitle}
+                subtitle={t.drawer.sections.notificationsSubtitle}
+                value={notificationsEnabled}
+                onValueChange={(val) => void handleToggleNotifications(val)}
+                hapticsEnabled={hapticsEnabled}
+                soundEnabled={soundEnabled}
+              />
+              <MinimalToggleRow
+                title={t.drawer.sections.hapticsTitle}
+                subtitle={t.drawer.sections.hapticsSubtitle}
+                value={hapticsEnabled}
+                onValueChange={setHapticsEnabled}
+                hapticsEnabled={hapticsEnabled}
+                soundEnabled={soundEnabled}
+                isLast
+              />
+            </View>
+            <Text style={styles.headlineTextSmall}>{t.onboarding.slide2.title}</Text>
+            <Text style={styles.subtitleTextSmall}>{t.onboarding.slide2.body}</Text>
           </View>
         </OnboardingSlide3D>
       </Animated.ScrollView>
 
-      {/* Floating Bottom Footer: Harmonious Signature Capsule CTA Button */}
+      {/* Floating Bottom Footer: Dynamic Pill Indicator (Continuous 120 FPS gesture-driven morphing) & Apple Pro CTA Button */}
       <View
         style={[
           styles.floatingFooter,
-          { paddingBottom: Math.max(insets.bottom + 14, 26) },
+          { paddingBottom: Math.max(insets.bottom + 16, 28) },
         ]}
       >
-        {/* Secondary Action Link on Step 1 ("Şimdi geç" / "Skip for now") */}
-        {step === 1 && !notificationsEnabled ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t.onboarding.skipForNow}
-            hitSlop={{ top: 10, bottom: 10, left: 14, right: 14 }}
-            onPress={() => moveToStep(2)}
-            style={({ pressed }) => [styles.secondaryLink, pressed && styles.pressed]}
-          >
-            <Text style={styles.secondaryLinkText}>
-              {t.onboarding.skipForNow}
-            </Text>
-          </Pressable>
-        ) : (
-          <View style={styles.secondaryLinkPlaceholder} />
-        )}
-
-        {/* Harmonious Signature Capsule CTA Button */}
-        <CapsuleCtaButton
-          label={capsuleCtaLabel}
-          onPress={() => void handlePrimaryCtaPress()}
-          accessibilityLabel={capsuleCtaLabel}
+        <DynamicPillIndicator
+          currentStep={step}
+          totalSteps={TOTAL_STEPS}
+          scrollX={scrollX}
+          width={width}
+        />
+        <View style={styles.footerSpacing} />
+        <AppleCtaButton
+          label={ctaLabel}
+          onPress={handlePrimaryCtaPress}
+          accessibilityLabel={ctaLabel}
         />
       </View>
     </View>
@@ -440,28 +463,68 @@ const styles = StyleSheet.create({
   pager: {
     flex: 1,
   },
+  visualArea: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  visualAreaCompact: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   bottomContentArea: {
     flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 10,
+    alignItems: 'center',
+  },
+  bottomContentAreaCompact: {
+    flex: 1,
     paddingHorizontal: 28,
-    paddingTop: 8,
+    paddingTop: 4,
+    alignItems: 'center',
+  },
+  togglesWrapper: {
+    width: '100%',
+    maxWidth: 320,
+    marginBottom: 12,
   },
   headlineText: {
     fontFamily: 'System',
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '700',
-    letterSpacing: -0.6,
-    lineHeight: 35,
+    letterSpacing: -0.8,
+    lineHeight: 38,
     color: '#FFFFFF',
-    textAlign: 'left',
+    textAlign: 'center',
+    marginTop: 6,
   },
   subtitleText: {
     fontFamily: 'System',
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#A1A1AA',
-    textAlign: 'left',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#71717A',
+    textAlign: 'center',
     marginTop: 6,
-    maxWidth: 320,
+    maxWidth: 280,
+  },
+  headlineTextSmall: {
+    fontFamily: 'System',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  subtitleTextSmall: {
+    fontFamily: 'System',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#71717A',
+    textAlign: 'center',
+    marginTop: 4,
+    maxWidth: 260,
   },
   floatingFooter: {
     position: 'absolute',
@@ -471,22 +534,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 20,
   },
-  secondaryLink: {
-    height: 26,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  secondaryLinkPlaceholder: {
-    height: 26,
-    marginBottom: 8,
-  },
-  secondaryLinkText: {
-    fontFamily: 'System',
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#71717A',
+  footerSpacing: {
+    height: 18,
   },
   pressed: {
     opacity: 0.65,

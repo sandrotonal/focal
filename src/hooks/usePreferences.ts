@@ -320,6 +320,25 @@ export function usePreferences() {
   const completeOnboarding = useCallback((prefs?: Partial<FocusPreferences>) => {
     setOnboardingCompleted(true);
     if (prefs) {
+      if (prefs.language) {
+        setLanguage(prefs.language);
+      }
+      if (prefs.sessionMinutes !== undefined) {
+        setSessionMinutes(prefs.sessionMinutes);
+        setDurationDraft(String(prefs.sessionMinutes));
+      }
+      if (prefs.ambientSound !== undefined) {
+        setAmbientSound(prefs.ambientSound);
+      }
+      if (prefs.notificationsEnabled !== undefined) {
+        setNotificationsEnabled(prefs.notificationsEnabled);
+      }
+      if (prefs.hapticsEnabled !== undefined) {
+        setHapticsEnabled(prefs.hapticsEnabled);
+      }
+      if (prefs.soundEnabled !== undefined) {
+        setSoundEnabled(prefs.soundEnabled);
+      }
       saveCurrentPreferences({ ...prefs, onboardingCompleted: true });
     } else {
       saveCurrentPreferences({ onboardingCompleted: true });

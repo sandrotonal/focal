@@ -25,24 +25,24 @@ Focal is a high-performance, minimalist mobile productivity application engineer
 
 ### Interface & Flow Showcase
 
-#### 1. Onboarding & 3D Spatial Gyroscope Architecture
+#### 1. Pure Onboarding Architecture & Atmospheric Soundscapes
 
 <table>
   <tr>
     <td align="center" width="33.3%">
-      <b>01 // Sundial Desk Hero</b><br/><br/>
-      <img src="assets/screenshots/01_onboarding_welcome.png" width="100%" alt="Sundial Desk Onboarding" />
-      <p align="left"><sub>Full-bleed 3D isometric chronometer artwork with native perspective rendering, bilingual localization toggle, and distraction-free value proposition.</sub></p>
+      <b>01 // Kinetic Focus Core</b><br/><br/>
+      <img src="assets/screenshots/01_onboarding_welcome.png" width="100%" alt="Kinetic Focus Core Onboarding" />
+      <p align="left"><sub>Pure SVG chronometer core with resonant breathing auras, tactile haptic feedback, bilingual localization switch, and zero box cards.</sub></p>
     </td>
     <td align="center" width="33.3%">
-      <b>02 // Acoustic Waves & Permissions</b><br/><br/>
-      <img src="assets/screenshots/02_onboarding_acoustic.png" width="100%" alt="Acoustic Waves Onboarding" />
-      <p align="left"><sub>Orbital gyroscope visualizer paired with transparent native notification permission request and interruptible skip handling.</sub></p>
+      <b>02 // Pure Atmospheric Soundscape</b><br/><br/>
+      <img src="assets/screenshots/02_onboarding_acoustic.png" width="100%" alt="Pure Atmospheric Soundscape Onboarding" />
+      <p align="left"><sub>32-bit alpha transparent natural soundscape visuals (Rain, Storm, Ocean, Zen) free of dark halos or borders, with minimal typographic sound selector.</sub></p>
     </td>
     <td align="center" width="33.3%">
-      <b>03 // Flow State Toggles & Setup</b><br/><br/>
-      <img src="assets/screenshots/03_onboarding_preferences.png" width="100%" alt="Flow State Onboarding" />
-      <p align="left"><sub>Resonance curves with custom SVG switch toggles for haptics, audio cues, and end notifications before entering the primary timer.</sub></p>
+      <b>03 // Cadence & Zero-Box Controls</b><br/><br/>
+      <img src="assets/screenshots/03_onboarding_preferences.png" width="100%" alt="Cadence and Minimal Switches Onboarding" />
+      <p align="left"><sub>Typographic interval cadence selector (15, 25, 45 dk) paired with minimal Apple hardware toggle switches and 120 FPS gesture-driven morphing pill indicators.</sub></p>
     </td>
   </tr>
 </table>
